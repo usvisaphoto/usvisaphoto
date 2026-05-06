@@ -1,4 +1,25 @@
+"use client";
+
+import { useRef, useState } from "react";
+
 export default function HomePage() {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const imageUrl = URL.createObjectURL(file);
+    setPreview(imageUrl);
+  };
+
   return (
     <main className="min-h-screen bg-white text-black overflow-x-hidden">
       {/* Header */}
@@ -20,11 +41,23 @@ export default function HomePage() {
             </a>
           </nav>
 
-          <button className="rounded-full bg-black text-white px-6 py-3 text-sm font-medium hover:scale-105 transition">
+          <button
+            onClick={handleUploadClick}
+            className="rounded-full bg-black text-white px-6 py-3 text-sm font-medium hover:scale-105 transition"
+          >
             Start Now
           </button>
         </div>
       </header>
+
+      {/* Hidden File Input */}
+      <input
+        type="file"
+        accept="image/*"
+        ref={fileInputRef}
+        onChange={handleFileChange}
+        className="hidden"
+      />
 
       {/* Hero */}
       <section className="relative pt-40 pb-32">
@@ -36,16 +69,18 @@ export default function HomePage() {
           </p>
 
           <h1 className="text-6xl md:text-8xl font-semibold tracking-[-0.06em] leading-[0.95]">
-            <br/>
-               
-            <br/> 
-            미국 비자/ 미국여권 
-            <br/>
-            <br/>
-            간편하고 가성비로 
-            <br/>
             <br />
-             정확히 정의하다
+            미국 비자 / 미국 여권
+            <br />
+             <span className="block text-4xl md:text-6xl">
+    U.S Visa / U.S Passport
+  </span>
+
+            <br />
+            간편하고 가성비로
+            <br />
+            <br />
+            정확히 정의하다
           </h1>
 
           <p className="mt-10 max-w-3xl mx-auto text-xl md:text-2xl text-black/60 leading-relaxed">
@@ -55,7 +90,10 @@ export default function HomePage() {
           </p>
 
           <div className="mt-14 flex flex-col sm:flex-row gap-5 justify-center">
-            <button className="rounded-full bg-black text-white px-10 py-5 text-lg font-medium shadow-2xl hover:scale-105 transition">
+            <button
+              onClick={handleUploadClick}
+              className="rounded-full bg-black text-white px-10 py-5 text-lg font-medium shadow-2xl hover:scale-105 transition"
+            >
               사진 업로드하기
             </button>
 
@@ -74,15 +112,13 @@ export default function HomePage() {
                   </p>
 
                   <h2 className="text-4xl md:text-5xl font-semibold tracking-[-0.05em] leading-tight">
-                    반려없는 100% 
-                    <br/>
-                  가이드로
-                  <br/>
-                    미국비자/미국여권
-                    <br/>
-                    파일제공
+                    반려없는 100%
                     <br />
-
+                    가이드로
+                    <br />
+                    미국 비자 / 미국 여권
+                    <br />
+                    파일 제공
                   </h2>
 
                   <p className="mt-6 text-lg text-black/60 leading-relaxed">
@@ -91,14 +127,24 @@ export default function HomePage() {
                   </p>
                 </div>
 
-                <div className="bg-white rounded-[2rem] shadow-inner aspect-[4/5] flex flex-col items-center justify-center">
-                  <div className="w-32 h-32 rounded-full bg-gradient-to-br from-gray-300 to-gray-500 mb-6"></div>
-                  <p className="text-2xl font-medium">
-                    AI Visa Preview
-                  </p>
-                  <p className="text-black/40 mt-2">
-                    U.S. Embassy Ready
-                  </p>
+                <div className="bg-white rounded-[2rem] shadow-inner aspect-[4/5] flex flex-col items-center justify-center overflow-hidden">
+                  {preview ? (
+                    <img
+                      src={preview}
+                      alt="Uploaded Preview"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <>
+                      <div className="w-32 h-32 rounded-full bg-gradient-to-br from-gray-300 to-gray-500 mb-6"></div>
+                      <p className="text-2xl font-medium">
+                        AI Visa Preview
+                      </p>
+                      <p className="text-black/40 mt-2">
+                        U.S. Embassy Ready
+                      </p>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -114,8 +160,8 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-8 grid md:grid-cols-3 gap-14 text-center">
           {[
             ["100%", "Photographic Guide Accuracy"],
-            ["3 Min", "Average processing time"],
-            ["365day", "Anytime, Anywhere"],
+            ["3 Min", "Average Processing Time"],
+            ["365Day", "Anytime, Anywhere"],
           ].map(([num, label]) => (
             <div key={num}>
               <h3 className="text-5xl md:text-7xl font-semibold tracking-[-0.05em]">
@@ -144,21 +190,9 @@ export default function HomePage() {
 
           <div className="grid md:grid-cols-3 gap-8">
             {[
-              [
-                "01",
-                "Upload",
-                "어디서든 촬영 후 업로드",
-              ],
-              [
-                "02",
-                "AI Precision",
-                "자동 보정 + 전문가 기준 분석",
-              ],
-              [
-                "03",
-                "Download",
-                "제출 준비 완료 파일 즉시 제공",
-              ],
+              ["01", "Upload", "어디서든 촬영 후 업로드"],
+              ["02", "AI Precision", "자동 보정 + 전문가 기준 분석"],
+              ["03", "Download", "제출 준비 완료 파일 즉시 제공"],
             ].map(([num, title, desc]) => (
               <div
                 key={num}
