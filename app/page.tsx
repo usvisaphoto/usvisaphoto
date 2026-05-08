@@ -127,25 +127,99 @@ export default function HomePage() {
                   </p>
                 </div>
 
-                <div className="bg-white rounded-[2rem] shadow-inner aspect-[4/5] flex flex-col items-center justify-center overflow-hidden">
-                  {preview ? (
-                    <img
-                      src={preview}
-                      alt="Uploaded Preview"
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <>
-                      <div className="w-32 h-32 rounded-full bg-gradient-to-br from-gray-300 to-gray-500 mb-6"></div>
-                      <p className="text-2xl font-medium">
-                        AI Visa Preview
-                      </p>
-                      <p className="text-black/40 mt-2">
-                        U.S. Embassy Ready
-                      </p>
-                    </>
-                  )}
-                </div>
+               <div className="bg-white rounded-[2rem] shadow-inner aspect-[4/5] flex items-center justify-center overflow-hidden relative">
+  {preview ? (
+    <>
+      {/* Uploaded Image */}
+      <div className="relative w-full h-full">
+      <img
+        src={preview}
+        alt="Uploaded Preview"
+        className="w-full h-full object-cover"
+      />
+        {/* 워터마크 */}
+    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+      <span className="text-white text-3xl md:text-4xl font-bold opacity-30 rotate-[-20deg]">
+        USVISAPHOTO USVISAPHOTO USVISAPHOTO USVISAPHOTO USVISAPHOTO USVISAPHOTO USVISAPHOTO USVISAPHOTO USVISAPHOTO USVISAPHOTO USVISAPHOTO USVISAPHOTO USVISAPHOTO USVISAPHOTO USVISAPHOTO USVISAPHOTO USVISAPHOTO USVISAPHOTO USVISAPHOTO USVISAPHOTO USVISAPHOTO USVISAPHOTO USVISAPHOTO USVISAPHOTO 
+      </span>
+    </div>
+  </div>
+     {preview && (
+  <button
+    className="mt-6 bg-black text-white px-6 py-3 rounded-full"
+    onClick={() => alert("결제 후 다운로드 가능합니다")}
+  >
+    다운로드 (유료)
+  </button>
+)}
+      {/* Dark Overlay */}
+      <div className="absolute inset-0 bg-black/10" />
+
+      {/* Visa Photo Guide Frame */}
+      <div className="absolute inset-6 border-4 border-white/90 rounded-[1.5rem] shadow-[0_0_0_9999px_rgba(255,255,255,0.03)]">
+        {/* Head Position Oval */}
+        <div className="absolute top-[18%] left-1/2 -translate-x-1/2 w-[42%] h-[32%] border-2 border-white/80 rounded-full" />
+
+        {/* Eye Line Guide */}
+        <div className="absolute top-[34%] left-[12%] right-[12%] border-t-2 border-dashed border-white/70" />
+
+        {/* Chin Line */}
+        <div className="absolute bottom-[18%] left-[20%] right-[20%] border-t border-white/50" />
+      </div>
+
+      {/* Approval Badge */}
+      <div className="absolute top-5 right-5 bg-white/90 backdrop-blur-md rounded-full px-4 py-2 text-sm font-semibold shadow-lg">
+        Embassy Ready
+      </div>
+
+      {/* AI Score */}
+      <div className="absolute bottom-5 left-5 right-5 bg-black/70 backdrop-blur-xl rounded-2xl px-5 py-4 text-white">
+        <div className="flex justify-between items-center text-sm mb-2">
+          <span>Embassy Readiness Score</span>
+          <span>98%</span>
+        </div>
+
+        <div className="w-full bg-white/20 rounded-full h-2">
+          <div className="bg-white h-2 rounded-full w-[98%]" />
+        </div>
+
+        <p className="text-xs text-white/70 mt-2">
+          Head alignment optimal · Background enhancement recommended
+        </p>
+        <button
+  onClick={() => {
+    const link = document.createElement("a");
+    link.href = preview!;
+    link.download = "us-visa-photo.jpg";
+    link.click();
+  }}
+  className="mt-4 w-full bg-white text-black rounded-xl py-3 text-sm font-semibold hover:scale-[1.02] transition"
+>
+  Download Visa Photo
+</button>
+      </div>
+    </>
+  ) : (
+    <>
+      <div className="w-32 h-32 rounded-full bg-gradient-to-br from-gray-300 to-gray-500 mb-6"></div>
+
+      <p className="text-2xl font-medium">
+        AI Visa Preview
+      </p>
+
+      <p className="text-black/40 mt-2">
+        U.S. Embassy Ready
+      </p>
+
+      {/* Default Guide Frame */}
+      <div className="absolute inset-6 border-4 border-black/10 rounded-[1.5rem]">
+        <div className="absolute top-[18%] left-1/2 -translate-x-1/2 w-[42%] h-[32%] border-2 border-black/10 rounded-full" />
+
+        <div className="absolute top-[34%] left-[12%] right-[12%] border-t-2 border-dashed border-black/10" />
+      </div>
+    </>
+  )}
+</div>
               </div>
             </div>
           </div>
