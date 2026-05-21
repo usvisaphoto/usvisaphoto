@@ -1,24 +1,155 @@
 "use client";
 
 import { useRef, useState } from "react";
+import * as FaceMesh from "@mediapipe/face_mesh";
 
 export default function HomePage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(null);
-
+  const [error, setError] = useState("");
+  export default function HomePage() 
+  
   const handleUploadClick = () => {
     fileInputRef.current?.click();
   };
 
-  const handleFileChange = (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  
+  const handleFileChange = async (
+  event: React.ChangeEvent<HTMLInputElement>
+) => {
+  const file = event.target.files?.[0];
 
-    const imageUrl = URL.createObjectURL(file);
-    setPreview(imageUrl);
+  if (!file) return;
+
+  // 즉시 미리보기
+  const previewUrl = URL.createObjectURL(file);
+  setPreview(previewUrl);
+
+  alert("AI processing started");
+
+  try {
+    const reader = new FileReader();
+
+    reader.readAsDataURL(file);
+
+    reader.onloadend = async () => {
+      const result = reader.result as string;
+
+      const base64 = result.split(",")[1];
+
+      // 배경제거
+      const removeRes = await fetch("/api/removebg", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          image_base64: base64,
+        }),
+      });
+
+      const removeData = await removeRes.json();
+
+      // 업스케일
+      const upscaleRes = await fetch("/api/upscale", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          image_base64: removeData.image_base64,
+        }),
+      });
+
+      const upscaleData = await upscaleRes.json();
+
+      const finalImage =
+        `data:image/jpeg;base64,${upscaleData.image_base64}`;
+
+      setPreview(finalImage);
+
+      // 얼굴 분석
+      analyzeFace(file);
+
+      alert("AI processing completed");
+    };
+  } catch (error) {
+    console.error(error);
+
+    alert("이미지 처리 실패");
+  }
+};
+
+const analyzeFace = (file: File) => {
+  const img = new Image();
+
+  img.src = URL.createObjectURL(file);
+
+  img.onload = async () => {
+    const faceMesh = new FaceMesh.FaceMesh({
+      locateFile: (file) =>
+        `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`,
+    });
+
+    faceMesh.setOptions({
+      maxNumFaces: 1,
+      refineLandmarks: true,
+      minDetectionConfidence: 0.5,
+      minTrackingConfidence: 0.5,
+    });
+
+    faceMesh.onResults((results) => {
+      if (
+        !results.multiFaceLandmarks ||
+        results.multiFaceLandmarks.length === 0
+      ) {
+        setError("얼굴이 감지되지 않았습니다");
+        return;
+      }
+
+      const landmarks =
+        results.multiFaceLandmarks[0];
+
+      const leftEye = landmarks[33];
+      const rightEye = landmarks[263];
+
+      const eyeDiffY =
+        Math.abs(leftEye.y - rightEye.y);
+
+      if (eyeDiffY > 0.03) {
+        setError(
+          "고개가 기울어져 있습니다"
+        );
+        return;
+      }
+
+      const nose = landmarks[1];
+
+      if (nose.x < 0.35 || nose.x > 0.65) {
+        setError(
+          "얼굴이 중앙에 위치해야 합니다"
+        );
+        return;
+      }
+
+      const faceWidth =
+        Math.abs(rightEye.x - leftEye.x);
+
+      if (faceWidth < 0.08) {
+        setError(
+          "얼굴이 너무 멀리 있습니다"
+        );
+        return;
+      }
+
+      setError("");
+    });
+
+    await faceMesh.send({
+      image: img,
+    });
   };
+};
 
   return (
     <main className="min-h-screen bg-white text-black overflow-x-hidden">
@@ -52,13 +183,12 @@ export default function HomePage() {
 
       {/* Hidden File Input */}
       <input
-        type="file"
-        accept="image/*"
-        ref={fileInputRef}
-        onChange={handleFileChange}
-        className="hidden"
-      />
-
+  type="file"
+  accept="image/*"
+  ref={fileInputRef}
+  onChange={handleFileChange}
+  className="hidden"
+/>
       {/* Hero */}
       <section className="relative pt-40 pb-32">
         <div className="absolute inset-0 bg-gradient-to-b from-gray-100 via-white to-white" />
@@ -140,9 +270,33 @@ export default function HomePage() {
         {/* 워터마크 */}
     <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
       <span className="text-white text-3xl md:text-4xl font-bold opacity-30 rotate-[-20deg]">
-        USVISAPHOTO USVISAPHOTO USVISAPHOTO USVISAPHOTO USVISAPHOTO USVISAPHOTO USVISAPHOTO USVISAPHOTO USVISAPHOTO USVISAPHOTO USVISAPHOTO USVISAPHOTO USVISAPHOTO USVISAPHOTO USVISAPHOTO USVISAPHOTO USVISAPHOTO USVISAPHOTO USVISAPHOTO USVISAPHOTO USVISAPHOTO USVISAPHOTO USVISAPHOTO USVISAPHOTO 
+        USVISAPHOTO USVISAPHOTO USVISAPHOTO USVISAPHOTO USVISAPHOTO USVISAPHOTO USVISAPHOTO USVISAPHOTO USVISAPHOTO USVISAPHOTO USVISAPHOTO USVISAPHOTO USVISAPHOTO USVISAPHOTO USVISAPHOTO USVISAPHOTO USVISAPHOTO USVISAPHOTO USVISAPHOTO USVISAPHOTO USVISAPHOTO USVISAPHOTO USVISAPHOTO USVISAPHOTO USVISAPHOTO 
       </span>
     </div>
+{error && (
+  <div className="mt-6 rounded-2xl bg-red-50 border border-red-200 p-5 text-center">
+    <p className="text-red-600 font-semibold text-lg">{error}</p>
+
+    {error === "안경은 반드시 미착용" && (
+      <p className="mt-2 text-sm text-black/60">
+        미국 비자 규정상 안경 착용 불가
+      </p>
+    )}
+
+    <p className="mt-3 text-sm text-black/60">
+      e-mail: photowinner@naver.com
+    </p>
+
+    <a
+      href="http://pf.kakao.com/_Txgxjlj"
+      target="_blank"
+      className="mt-2 inline-block text-sm underline"
+    >
+      실시간 채팅 상담
+    </a>
+  </div>
+)}
+
   </div>
      {preview && (
   <button
@@ -188,11 +342,8 @@ export default function HomePage() {
         </p>
         <button
   onClick={() => {
-    const link = document.createElement("a");
-    link.href = preview!;
-    link.download = "us-visa-photo.jpg";
-    link.click();
-  }}
+  alert("결제 완료 후 다운로드 가능합니다");
+}}
   className="mt-4 w-full bg-white text-black rounded-xl py-3 text-sm font-semibold hover:scale-[1.02] transition"
 >
   Download Visa Photo
