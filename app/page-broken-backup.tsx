@@ -173,29 +173,30 @@ function initGuideLines() {
 fileInput.addEventListener('change', function(e) {
   const file = e.target.files[0];
   if (!file) return;
-  // 새 사진 업로드 시 이전 결제 상태 초기화
-window.parent.localStorage.removeItem('usvisa_clean_photo');
-window.parent.localStorage.removeItem('usvisa_download_count');
-window.parent.localStorage.removeItem('usvisa_pending_clean_photo');
-window.parent.localStorage.removeItem('usvisa_protected_preview');
 
-if (window.parent.location.search.includes('paid=1')) {
-  window.parent.history.replaceState({}, '', window.parent.location.pathname);
-}
+  // 새 사진 업로드 시 이전 결제/결과 초기화
+  window.parent.localStorage.removeItem('usvisa_clean_photo');
+  window.parent.localStorage.removeItem('usvisa_download_count');
+  window.parent.localStorage.removeItem('usvisa_pending_clean_photo');
+  window.parent.localStorage.removeItem('usvisa_protected_preview');
 
+  if (window.parent.location.search.includes('paid=1')) {
+    window.parent.history.replaceState({}, '', window.parent.location.pathname);
+  }
 
   uploadedFile = file;
+  uploadedImg = null;
   bgRemovedImg = null;
   resultUrl = null;
 
   createBtn.disabled = false;
-  createBtn.style.opacity = "1";
+  createBtn.style.opacity = '1';
   createBtn.textContent = 'Create Photo';
 
   canvas.style.display = 'none';
   downloadBtn.style.display = 'none';
 
-  statusEl.innerHTML = "Photo uploaded. Click Auto Detect.";
+  placeholder.style.display = 'none';
 
   const url = URL.createObjectURL(file);
   const img = new Image();
@@ -203,16 +204,31 @@ if (window.parent.location.search.includes('paid=1')) {
   img.onload = function() {
     uploadedImg = img;
 
-    previewImg.src = url;
-    previewImg.style.display = 'block';
+    // Preview img 표시
+previewImg.src = url;
+previewImg.style.display = 'block';
+previewImg.style.opacity = '1';
+previewImg.style.visibility = 'visible';
+previewImg.style.zIndex = '2';
 
-    placeholder.style.display = 'none';
+// 혹시 img가 안 보일 경우 대비해서 박스 배경에도 표시
+zone.style.backgroundImage = 'url(' + url + ')';
+zone.style.backgroundSize = 'contain';
+zone.style.backgroundRepeat = 'no-repeat';
+zone.style.backgroundPosition = 'center';
+zone.style.backgroundColor = '#f8fafc';
+
+
+    crownLine.style.display = 'block';
+    chinLine.style.display = 'block';
+
+    statusEl.textContent = 'Photo uploaded. Click Auto Detect.';
 
     setTimeout(initGuideLines, 50);
   };
 
   img.onerror = function() {
-    statusEl.innerHTML = "Image preview failed. Please try another photo.";
+    statusEl.textContent = 'Image preview failed. Please try another photo.';
   };
 
   img.src = url;
@@ -364,8 +380,10 @@ if (mouthRatio > 0.055) {
     crownLine.style.top = imageYToScreen(estimatedCrownY) + 'px';
     chinLine.style.top = imageYToScreen(detectedChinY) + 'px';
 
-    statusEl.textContent = 'Auto detected. Adjust lines if needed, then Create Photo';
+    statusEl.textContent = 'Auto detection complete.
 
+  Verify crown and chin placement before creating your photo..';
+  
   } catch (err) {
     statusEl.textContent = 'Auto detect failed. Please adjust lines manually.';
   }
@@ -602,6 +620,7 @@ applyPreviewProtection(ctx, TARGET, TARGET);
 const protectedPreviewUrl = canvas.toDataURL('image/jpeg', 0.92);
 window.parent.localStorage.setItem('usvisa_protected_preview', protectedPreviewUrl);
 
+zone.style.backgroundImage = 'none';
 canvas.style.display = 'block';
 downloadBtn.style.display = 'block';
 downloadBtn.disabled = false;
@@ -811,8 +830,8 @@ export default function HomePage() {
                     Embassy-Ready Photo Creator
                   </div>
                   <div className="text-xs text-slate-500">
-  Upload · Auto Detect · Create Photo · Download
-</div>
+                    Upload · Auto Detect · Create Photo · Download
+                  </div>
                 </div>
 
                 <div className="rounded-full bg-blue-100 px-3 py-1 text-xs font-bold text-blue-900">
