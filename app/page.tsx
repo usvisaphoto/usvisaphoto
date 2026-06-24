@@ -790,12 +790,12 @@ downloadBtn.addEventListener('click', async function() {
   window.parent.localStorage.setItem('usvisa_clean_photo', resultUrl);
 
   downloadBtn.disabled = true;
-  downloadBtn.textContent = 'Opening checkout...';
+  downloadBtn.textContent = 'Opening PayPal...';
 
   try {
-    const response = await fetch('/api/create-checkout-session', {
-      method: 'POST',
-    });
+    const response = await fetch('/api/create-paypal-order', {
+  method: 'POST',
+  });
 
     const data = await response.json();
 
