@@ -14,13 +14,40 @@ html,body{width:100%;height:100%;background:#f8fafc;font-family:system-ui}
   background:#f8fafc;overflow:hidden;display:flex;align-items:center;justify-content:center;cursor:pointer;
 }
 .upload-zone input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;z-index:5}
+.upload-zone input.disabled-upload{
+  pointer-events:none;
+  z-index:0;
+}
+.upload-zone input.disabled-upload{pointer-events:none}
 .placeholder{text-align:center;color:#475569;pointer-events:none}
 .icon{width:80px;height:80px;border-radius:50%;background:#dbeafe;display:flex;align-items:center;justify-content:center;font-size:32px;margin:0 auto 12px}
 .placeholder p{font-size:14px;font-weight:700}
 .placeholder small{display:block;margin-top:4px;font-size:12px;color:#94a3b8}
 #preview-img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:none;background:#f8fafc;z-index:2}
-.guide-line{position:absolute;left:0;right:0;height:2px;display:none;z-index:4;cursor:ns-resize}
-.guide-line span{position:absolute;left:8px;top:-18px;font-size:11px;font-weight:800;padding:2px 7px;border-radius:999px;color:white}
+
+.guide-line{
+  position:absolute;
+  left:0;
+  right:0;
+
+  height:2px;
+
+  display:none;
+  z-index:50;
+
+  cursor:ns-resize;
+  touch-action:none;
+}
+.guide-line::before{
+  content:'';
+  position:absolute;
+  left:0;
+  right:0;
+  top:-12px;
+  bottom:-12px;
+}
+
+.guide-line span{position:absolute;left:8px;top:-18px;font-size:11px;font-weight:800;padding:2px 7px;border-radius:999px;color:white; pointer-events:none;}
 #crown-line{top:80px;background:#ef4444}
 #crown-line span{background:#ef4444}
 #chin-line{top:210px;background:#2563eb}
@@ -31,6 +58,13 @@ button{flex:1;border:0;border-radius:14px;padding:13px 10px;font-size:14px;font-
 #create-btn{background:#1e3a8a;color:white}
 #download-btn{width:100%;margin-top:8px;background:#eff6ff;color:#1e3a8a;border:1px solid #bfdbfe;display:none}
 #result-canvas{display:none;width:100%;margin-top:12px;border-radius:16px;background:white;border:1px solid #dbeafe}
+.new-photo-btn{
+  width:100%;
+  margin-top:8px;
+  background:#f8fafc;
+  color:#1e3a8a;
+  border:1px solid #bfdbfe;
+}
 .status{font-size:12px;color:#64748b;text-align:center;margin-top:8px;min-height:18px;line-height:1.5}
 .notice{
   margin-top:10px;
@@ -64,9 +98,12 @@ button{flex:1;border:0;border-radius:14px;padding:13px 10px;font-size:14px;font-
   </div>
 
   <div class="actions">
-    <button id="detect-btn">Auto Detect</button>
-    <button id="create-btn">Create Photo</button>
+    <button id="detect-btn" type="button">Auto Detect</button>
+<button id="create-btn" type="button">Create Photo</button>
   </div>
+  <button id="new-photo-btn" type="button" class="new-photo-btn">
+  Choose Another Photo
+</button>
 
   <div class="guide-note">
   Auto detection is applied automatically.<br>
@@ -99,6 +136,7 @@ const crownLine = document.getElementById('crown-line');
 const chinLine = document.getElementById('chin-line');
 const detectBtn = document.getElementById('detect-btn');
 const createBtn = document.getElementById('create-btn');
+const newPhotoBtn = document.getElementById('new-photo-btn');
 const downloadBtn = document.getElementById('download-btn');
 const canvas = document.getElementById('result-canvas');
 const statusEl = document.getElementById('status');
@@ -109,8 +147,23 @@ let uploadedImg = null;
 let bgRemovedImg = null;
 let resultUrl = null;
 let faceTiltAngle = 0;
+let photoValidationPassed = false;
 let draggingLine = null;
-let faceMesh = null;
+function showRequirementAlert() {
+  const message = [
+    "U.S. Visa Photo Check",
+    "",
+    "✓ Eyes open",
+    "✓ Mouth closed",
+    "✓ No visible teeth",
+    "✓ No hats or sunglasses",
+    "✓ Verify Crown & Chin lines",
+    "",
+    "Incorrect photos may be rejected."
+  ].join("\\n");
+
+  window.alert(message);
+}let faceMesh = null;
 
 const TARGET = 600;
 const PHOTO_CM = 5.08;
@@ -187,6 +240,8 @@ if (window.parent.location.search.includes('paid=1')) {
   uploadedFile = file;
   bgRemovedImg = null;
   resultUrl = null;
+  photoValidationPassed = false;
+  
 
   createBtn.disabled = false;
   createBtn.style.opacity = "1";
@@ -202,9 +257,14 @@ if (window.parent.location.search.includes('paid=1')) {
 
   img.onload = function() {
     uploadedImg = img;
-
+  
+    fileInput.classList.add('disabled-upload');
+    
+    
     previewImg.src = url;
     previewImg.style.display = 'block';
+   
+    
 
     placeholder.style.display = 'none';
 
@@ -216,6 +276,11 @@ if (window.parent.location.search.includes('paid=1')) {
   };
 
   img.src = url;
+});
+newPhotoBtn.addEventListener('click', function() {
+  fileInput.classList.remove('disabled-upload');
+  fileInput.value = '';
+  fileInput.click();
 });
 
 [crownLine, chinLine].forEach(line => {
@@ -269,7 +334,9 @@ async function initFaceMesh() {
   return faceMesh;
 }
 
-detectBtn.addEventListener('click', async function() {
+detectBtn.addEventListener('click', async function(e) {
+  e.preventDefault();
+
   const img = getCurrentImage();
 
   if (!img) {
@@ -311,6 +378,7 @@ detectBtn.addEventListener('click', async function() {
     }
 
     const lm = detected.multiFaceLandmarks[0];
+    
     const leftEye = lm[33];
 const rightEye = lm[263];
 
@@ -363,8 +431,9 @@ if (mouthRatio > 0.055) {
 
     crownLine.style.top = imageYToScreen(estimatedCrownY) + 'px';
     chinLine.style.top = imageYToScreen(detectedChinY) + 'px';
-
-    statusEl.textContent = 'Auto detected. Adjust lines if needed, then Create Photo';
+   
+    showRequirementAlert();     
+    statusEl.innerHTML = 'Auto detection completed.<br><br>Please verify before creating your photo:<br>✓ Eyes are fully open<br>✓ Mouth is closed (no visible teeth)<br>✓ No hat or sunglasses<br>✓ Crown line touches the top of the hair<br>✓ Chin line touches the bottom of the chin<br><br>Drag the guide lines if adjustment is needed.';
 
   } catch (err) {
     statusEl.textContent = 'Auto detect failed. Please adjust lines manually.';
@@ -520,7 +589,9 @@ async function removeBackgroundWithPhotoRoom() {
   });
 }
 
-createBtn.addEventListener('click', async function() {
+createBtn.addEventListener('click', async function(e) {
+  e.preventDefault();
+
   if (!uploadedImg || !uploadedFile) {
     statusEl.textContent = 'Please upload a photo first.';
     return;
@@ -633,12 +704,14 @@ function restorePaidDownloadIfAvailable() {
 
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, TARGET, TARGET);
+    
     ctx.drawImage(paidImg, 0, 0, TARGET, TARGET);
 
     canvas.style.display = 'block';
     downloadBtn.style.display = 'block';
     downloadBtn.disabled = false;
     downloadBtn.textContent = 'Download Photo';
+
     downloadBtn.dataset.downloadCount = savedDownloadCount;
 
     statusEl.textContent = 'Payment complete. Your download is ready.';
