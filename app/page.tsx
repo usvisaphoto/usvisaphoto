@@ -1,5 +1,5 @@
 "use client";
-
+import HomeTrustSections from "@/components/HomeTrustSections";
 const uploadBoxHtml = `
 <!DOCTYPE html>
 <html>
@@ -591,6 +591,7 @@ async function removeBackgroundWithPhotoRoom() {
 
 createBtn.addEventListener('click', async function(e) {
   e.preventDefault();
+  shouldScrollAfterCreate = true;
 
   if (!uploadedImg || !uploadedFile) {
     statusEl.textContent = 'Please upload a photo first.';
@@ -640,7 +641,8 @@ createBtn.addEventListener('click', async function(e) {
     const drawW = iw * scale;
     const drawH = ih * scale;
 
-    const dx = TARGET / 2 - centerX * scale;
+    const CENTER_FIX_X = 23; // 오른쪽으로 23px 이동
+const dx = TARGET / 2 - centerX * scale + CENTER_FIX_X;
     const dy = TOP_MARGIN_PX - crownY * scale;
 
     ctx.save();
@@ -679,7 +681,41 @@ downloadBtn.disabled = false;
 downloadBtn.textContent = 'Unlock Download - $4.99';
 
 statusEl.textContent = 'Preview only. Face area is blurred and watermarked until payment.';  } catch (err) {
-    console.error(err);
+scrollToResultPreview();
+
+statusEl.textContent = 'Preview only. Face area is blurred and watermarked until payment.';
+if (shouldScrollAfterCreate) {
+  shouldScrollAfterCreate = false;
+
+  setTimeout(() => {
+    const frame = window.frameElement;
+
+    if (frame && window.parent) {
+      const frameRect = frame.getBoundingClientRect();
+      const targetTop =
+        window.parent.scrollY +
+        frameRect.top +
+        canvas.offsetTop -
+        80;
+
+      window.parent.scrollTo({
+        top: targetTop,
+        behavior: 'smooth'
+      });
+    }
+  }, 500);
+}
+
+if (resultUrl && uploadedFile) {
+  setTimeout(() => {
+    canvas.scrollIntoView({
+      behavior: 'smooth',
+      block: 'center'
+    });
+  }, 500);
+}
+
+console.error(err);
     statusEl.textContent = 'Photo processing failed. Please try again.';
   }
 
@@ -741,9 +777,19 @@ function restoreUnpaidPreviewIfAvailable() {
     ctx.drawImage(preview, 0, 0, TARGET, TARGET);
 
     canvas.style.display = 'block';
-    downloadBtn.style.display = 'block';
-    downloadBtn.disabled = false;
-    downloadBtn.textContent = 'Unlock Download - $4.99';
+
+// 모바일에서 결과 사진 위치로 자동 이동
+setTimeout(() => {
+  canvas.scrollIntoView({
+    behavior: 'smooth',
+    block: 'center'
+  });
+}, 300);
+
+downloadBtn.style.display = 'block';
+downloadBtn.disabled = false;
+downloadBtn.textContent = 'Unlock Download - $4.99';
+
 
     statusEl.textContent = 'Preview restored. Unlock download after payment.';
   };
@@ -902,6 +948,7 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+   <HomeTrustSections />
     </main>
   );
 }
