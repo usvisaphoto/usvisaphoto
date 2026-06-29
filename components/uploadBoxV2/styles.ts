@@ -117,4 +117,50 @@ button{flex:1;border:0;border-radius:14px;padding:13px 10px;font-size:14px;font-
     font-weight:700;
 }
 
+/* ===== Validation Card ===== */
+
+.validation-card{
+  display:none;
+  margin-top:14px;
+  margin-bottom:14px;
+  padding:14px;
+  border-radius:16px;
+  background:#ecfdf5;
+  border:1px solid #86efac;
+  color:#064e3b;
+  text-align:left;
+  font-size:12px;
+  line-height:1.7;
+}
+
+.validation-title{
+  font-size:14px;
+  font-weight:800;
+  margin-bottom:8px;
+  color:#065f46;
+}
+
+.validation-row{
+  padding:3px 0;
+}
+
+.validation-final{
+  margin-top:10px;
+  padding-top:10px;
+  border-top:1px solid #bbf7d0;
+  font-weight:800;
+}
+
+.validation-error{
+  background:#fef2f2;
+  border-color:#fecaca;
+  color:#7f1d1d;
+}
+
+.validation-warning{
+  background:#fffbeb;
+  border-color:#fde68a;
+  color:#78350f;
+}
+
 `;

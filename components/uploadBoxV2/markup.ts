@@ -27,6 +27,53 @@ export const uploadBoxMarkup = String.raw`
     drag the guide lines before creating your photo.
   </div>
 
+
+<div
+  id="validation-card"
+  style="
+    display:none;
+    margin-top:16px;
+    margin-bottom:16px;
+    padding:18px;
+    border-radius:16px;
+    background:#ecfdf5;
+    border:1px solid #86efac;
+    color:#065f46;
+    box-shadow:0 8px 24px rgba(0,0,0,.08);
+    line-height:1.7;
+  "
+>
+
+<div style="font-size:18px;font-weight:700;margin-bottom:10px;">
+✅ Photo Validation Report
+</div>
+
+<div>👁 Eyes Open</div>
+<div>🙂 Mouth Closed</div>
+<div>🦷 No Visible Teeth</div>
+<div>🧢 No Hats or Sunglasses</div>
+<div>📏 Head Position Detected</div>
+
+<hr style="margin:14px 0;">
+
+<div style="font-size:14px;">
+Please verify the Crown and Chin guide lines before creating your photo.
+</div>
+
+</div>
+
+<div id="validation-card" class="validation-card" style="display:none;">
+  <div class="validation-title">Photo Validation Report</div>
+
+  <div id="check-face" class="validation-row">Checking face...</div>
+  <div id="check-eyes" class="validation-row">Checking eyes...</div>
+  <div id="check-mouth" class="validation-row">Checking mouth...</div>
+  <div id="check-glasses" class="validation-row">Checking glasses...</div>
+  <div id="check-position" class="validation-row">Checking head position...</div>
+
+  <div id="validation-final" class="validation-final"></div>
+</div>
+
   <div class="status" id="status">Upload a photo first</div>
 
   <div class="notice" id="uploadTips">

@@ -1,3 +1,4 @@
+import { uploadBoxValidation } from "./validation";
 import { uploadBoxStyles } from "./styles";
 import { uploadBoxMarkup } from "./markup";
 import { uploadBoxLogic } from "./logic";
@@ -15,6 +16,7 @@ ${uploadBoxStyles}
 ${uploadBoxMarkup}
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
 <script>
+${uploadBoxValidation}
 ${uploadBoxLogic}
 </script>
 </body>

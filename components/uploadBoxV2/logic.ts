@@ -13,6 +13,13 @@ const canvas = document.getElementById('result-canvas');
 const statusEl = document.getElementById('status');
 const resultPanel = document.getElementById('resultPanel');
 const uploadTips = document.getElementById('uploadTips');
+const validationCard = document.getElementById('validation-card');
+const checkFace = document.getElementById('check-face');
+const checkEyes = document.getElementById('check-eyes');
+const checkMouth = document.getElementById('check-mouth');
+const checkGlasses = document.getElementById('check-glasses');
+const checkPosition = document.getElementById('check-position');
+const validationFinal = document.getElementById('validation-final');
 const ctx = canvas.getContext('2d');
 
 let uploadedFile = null;
@@ -23,20 +30,23 @@ let faceTiltAngle = 0;
 let photoValidationPassed = false;
 let draggingLine = null;
 function showRequirementAlert() {
-  const message = [
-    "U.S. Visa Photo Check",
-    "",
-    "✓ Eyes open",
-    "✓ Mouth closed",
-    "✓ No visible teeth",
-    "✓ No hats or sunglasses",
-    "✓ Verify Crown & Chin lines",
-    "",
-    "Incorrect photos may be rejected."
-  ].join("\\n");
-
-  window.alert(message);
-}let faceMesh = null;
+  statusEl.innerHTML =
+    '<div style="margin-top:12px;padding:14px;border-radius:14px;background:#effaf5;border:1px solid #c7ead9;color:#0f5132;text-align:left;font-size:13px;line-height:1.7;">' +
+      '<div style="font-size:15px;font-weight:700;color:#065f46;margin-bottom:10px;">' +
+        '✓ Photo Validation Report' +
+      '</div>' +
+      '<div>✅ Eyes Open</div>' +
+      '<div>✅ Mouth Closed</div>' +
+      '<div>✅ No Visible Teeth</div>' +
+      '<div>✅ No Hats or Sunglasses</div>' +
+      '<div>✅ Head Position Detected</div>' +
+      '<hr style="margin:10px 0;border:none;border-top:1px solid #d7eedd;">' +
+      '<div style="color:#047857;">' +
+        'Please verify the <b>Crown</b> and <b>Chin</b> guide lines before creating your photo.' +
+      '</div>' +
+    '</div>';
+}
+    let faceMesh = null;
 
 const TARGET = 600;
 const PHOTO_CM = 5.08;
@@ -315,8 +325,10 @@ if (mouthRatio > 0.055) {
     crownLine.style.top = imageYToScreen(estimatedCrownY) + 'px';
     chinLine.style.top = imageYToScreen(detectedChinY) + 'px';
    
-    showRequirementAlert();     
-    statusEl.innerHTML = 'Auto detection completed.<br><br>Please verify before creating your photo:<br>✓ Eyes are fully open<br>✓ Mouth is closed (no visible teeth)<br>✓ No hat or sunglasses<br>✓ Crown line touches the top of the hair<br>✓ Chin line touches the bottom of the chin<br><br>Drag the guide lines if adjustment is needed.';
+    showRequirementAlert();
+
+statusEl.innerHTML +=
+'<br><br><b>Auto detection completed.</b><br>Please verify the guide lines before creating your photo.';
 
   } catch (err) {
     statusEl.textContent = 'Auto detect failed. Please adjust lines manually.';
@@ -524,7 +536,7 @@ createBtn.addEventListener('click', async function(e) {
     const drawW = iw * scale;
     const drawH = ih * scale;
 
-    const CENTER_FIX_X = 23; // 오른쪽으로 23px 이동
+    const CENTER_FIX_X = -15; // 오른쪽으로 23px 이동
 const dx = TARGET / 2 - centerX * scale + CENTER_FIX_X;
     const dy = TOP_MARGIN_PX - crownY * scale;
 
