@@ -1,9 +1,18 @@
 export default function HomeTrustSections() {
   const trustItems = [
-    ["25 Years Experience", "Built on professional photo studio standards."],
-    ["Privacy First", "Photos are processed securely and never permanently stored."],
-    ["Embassy-Ready", "Designed for U.S. visa and passport photo preparation."],
-  ];
+  [
+    "⭐ 25 Years Experience",
+    "Built on professional studio standards.",
+  ],
+  [
+    "🔒 Privacy Protected",
+    "Your photos are processed securely and are never permanently stored.",
+  ],
+  [
+    "✅ Embassy Accepted Standards",
+    "Prepared to meet official U.S. visa and passport photo requirements.",
+  ],
+];
 
   const steps = ["Upload", "Auto Detect", "Create Photo", "Download"];
 
@@ -14,23 +23,29 @@ export default function HomeTrustSections() {
   ];
 
   return (
-    <section className="mx-auto max-w-6xl px-5 pb-20">
+    <section className="mx-auto max-w-6xl px-5 pb-20 p-10">
       <div className="mb-10 text-center">
         <p className="text-sm font-bold uppercase tracking-widest text-blue-200">
-          Built for trust
-        </p>
-        <h2 className="mt-3 text-3xl font-extrabold text-white md:text-4xl">
-          Professional photo standards, online.
-        </h2>
-        <p className="mx-auto mt-4 max-w-2xl text-blue-100">
-          USVisaPhoto is designed for secure, fast, embassy-ready photo preparation.
-        </p>
+  READY TO CREATE?
+</p>
+
+<h2 className="mt-3 text-3xl font-extrabold text-white md:text-4xl">
+  Your embassy-ready photo
+  <br />
+  is only minutes away.
+</h2>
+
+<p className="mx-auto mt-4 max-w-2xl text-blue-100">
+  Upload one photo.
+  <br />
+  We'll handle the rest.
+</p>
       </div>
 
       <div className="grid gap-5 md:grid-cols-3">
         {trustItems.map(([title, desc]) => (
           <div key={title} className="rounded-3xl border border-white/15 bg-white/10 p-6 text-white">
-            <h3 className="text-xl font-extrabold">{title}</h3>
+            <h3 className="text-2xl font-extrabold">{title}</h3>
             <p className="mt-3 leading-7 text-blue-100">{desc}</p>
           </div>
         ))}

@@ -1,12 +1,4 @@
-"use client";
-import ReviewSection from "@/components/ReviewSection";
-import GuaranteeSection from "@/components/GuaranteeSection";
-import TrustIntroSection from "@/components/TrustIntroSection";
-import HeroUploadSection from "@/components/HeroUploadSection";
-import BeforeAfterSection from "@/components/BeforeAfterSection";
-import { uploadBoxHtmlV2 } from "@/components/uploadBoxV2";
-import HomeTrustSections from "@/components/HomeTrustSections";
-const uploadBoxHtml = `
+export const uploadBoxHtmlV2 = `
 <!DOCTYPE html>
 <html>
 <head>
@@ -63,7 +55,7 @@ button{flex:1;border:0;border-radius:14px;padding:13px 10px;font-size:14px;font-
 #detect-btn{background:#0f766e;color:white}
 #create-btn{background:#1e3a8a;color:white}
 #download-btn{width:100%;margin-top:8px;background:#eff6ff;color:#1e3a8a;border:1px solid #bfdbfe;display:none}
-#result-canvas{display:none;width:100%;margin-top:12px;border-radius:16px;background:white;border:1px solid #dbeafe}
+#result-canvas{display:none;width:100%;height:auto;max-height:360px;object-fit:contain;border-radius:16px;background:white;border:1px solid #dbeafe}
 .new-photo-btn{
   width:100%;
   margin-top:8px;
@@ -148,43 +140,47 @@ button{flex:1;border:0;border-radius:14px;padding:13px 10px;font-size:14px;font-
 
   <div class="actions">
     <button id="detect-btn" type="button">Auto Detect</button>
-<button id="create-btn" type="button">Create Photo</button>
+    <button id="create-btn" type="button">Create Photo</button>
   </div>
+
   <button id="new-photo-btn" type="button" class="new-photo-btn">
-  Choose Another Photo
-</button>
+    Choose Another Photo
+  </button>
 
-  <div class="guide-note">
-  Auto detection is applied automatically.<br>
-  If the crown or chin line looks inaccurate,
-  drag the guide lines before creating your photo.
-</div>
-
- <button id="download-btn">
-  Unlock Download - $4.99
-</button>
-  <canvas id="result-canvas" width="600" height="600"></canvas>
-  <div class="status" id="status">Upload a photo first</div>
-</div>
-<div class="notice" id="uploadTips">
-  <strong>Before uploading:</strong><br>
-  Look directly at the camera · Keep both eyes open · Keep your mouth closed · Do not wear hats or sunglasses.
-  <br><br>
-  For special cases or manual review, contact:
-  <a href="mailto:usvisaphoto1@gmail.com">usvisaphoto1@gmail.com</a>
-</div>
-
-<div id="resultPanel" class="result-panel">
-  <div class="result-title">Preview Result</div>
-  <div class="result-subtitle">
-    Face area is blurred and watermarked until payment.
+  <div class="guide-note" id="guideNote">
+    Auto detection is applied automatically.<br>
+    If the crown or chin line looks inaccurate,
+    drag the guide lines before creating your photo.
   </div>
 
-  <div class="result-canvas-wrap"></div>
+  <div class="status" id="status">Upload a photo first</div>
 
-  <div class="result-help">
-    Need help? Contact
+  <div class="notice" id="uploadTips">
+    <strong>Before uploading:</strong><br>
+    Look directly at the camera · Keep both eyes open · Keep your mouth closed · Do not wear hats or sunglasses.
+    <br><br>
+    For special cases or manual review, contact:
     <a href="mailto:usvisaphoto1@gmail.com">usvisaphoto1@gmail.com</a>
+  </div>
+
+  <div id="resultPanel" class="result-panel">
+    <div class="result-title">Preview Result</div>
+    <div class="result-subtitle">
+      Face area is blurred and watermarked until payment.
+    </div>
+
+    <div class="result-canvas-wrap">
+      <canvas id="result-canvas" width="600" height="600"></canvas>
+    </div>
+
+    <button id="download-btn" type="button">
+      Unlock Download - $4.99
+    </button>
+
+    <div class="result-help">
+      Need help? Contact
+      <a href="mailto:usvisaphoto1@gmail.com">usvisaphoto1@gmail.com</a>
+    </div>
   </div>
 </div>
 
@@ -203,6 +199,7 @@ const newPhotoBtn = document.getElementById('new-photo-btn');
 const downloadBtn = document.getElementById('download-btn');
 const canvas = document.getElementById('result-canvas');
 const statusEl = document.getElementById('status');
+const resultPanel = document.getElementById('resultPanel');
 const uploadTips = document.getElementById('uploadTips');
 const ctx = canvas.getContext('2d');
 
@@ -315,6 +312,8 @@ if (window.parent.location.search.includes('paid=1')) {
 
   canvas.style.display = 'none';
   downloadBtn.style.display = 'none';
+  if (resultPanel) resultPanel.style.display = 'none';
+  if (uploadTips) uploadTips.style.display = 'block';
   
   previewImg.style.display = "none";
   previewImg.src = "";
@@ -748,6 +747,8 @@ const protectedPreviewUrl = canvas.toDataURL('image/jpeg', 0.92);
 window.parent.localStorage.setItem('usvisa_protected_preview', protectedPreviewUrl);
 
 if (uploadTips) uploadTips.style.display = 'none';
+if (resultPanel) resultPanel.style.display = 'block';
+
 canvas.style.display = 'block';
 canvas.style.width = '100%';
 canvas.style.height = 'auto';
@@ -831,6 +832,9 @@ function restorePaidDownloadIfAvailable() {
     
     ctx.drawImage(paidImg, 0, 0, TARGET, TARGET);
 
+    if (uploadTips) uploadTips.style.display = 'none';
+    if (resultPanel) resultPanel.style.display = 'block';
+
     canvas.style.display = 'block';
     downloadBtn.style.display = 'block';
     downloadBtn.disabled = false;
@@ -863,6 +867,9 @@ function restoreUnpaidPreviewIfAvailable() {
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, TARGET, TARGET);
     ctx.drawImage(preview, 0, 0, TARGET, TARGET);
+
+    if (uploadTips) uploadTips.style.display = 'none';
+    if (resultPanel) resultPanel.style.display = 'block';
 
     canvas.style.display = 'block';
 
@@ -949,20 +956,3 @@ downloadBtn.addEventListener('click', async function() {
 </body>
 </html>
 `;
-
-export default function HomePage() {
-  return (
-    <main className="min-h-screen bg-gradient-to-br from-blue-950 via-blue-900 to-slate-950 text-white">
-      
-      
-      <HeroUploadSection />
-
-      <TrustIntroSection />
-
-      <BeforeAfterSection />
-      <ReviewSection />
-      <GuaranteeSection />
-      <HomeTrustSections /> 
-    </main>
-  );
-}

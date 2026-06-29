@@ -1,196 +1,4 @@
-"use client";
-import ReviewSection from "@/components/ReviewSection";
-import GuaranteeSection from "@/components/GuaranteeSection";
-import TrustIntroSection from "@/components/TrustIntroSection";
-import HeroUploadSection from "@/components/HeroUploadSection";
-import BeforeAfterSection from "@/components/BeforeAfterSection";
-import { uploadBoxHtmlV2 } from "@/components/uploadBoxV2";
-import HomeTrustSections from "@/components/HomeTrustSections";
-const uploadBoxHtml = `
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8" />
-<style>
-*{box-sizing:border-box;margin:0;padding:0}
-html,body{width:100%;height:100%;background:#f8fafc;font-family:system-ui}
-.wrap{width:100%;height:100%;padding:0}
-.upload-zone{
-  position:relative;width:100%;height:320px;border:2px dashed #bfdbfe;border-radius:16px;
-  background:#f8fafc;overflow:hidden;display:flex;align-items:center;justify-content:center;cursor:pointer;
-}
-.upload-zone input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;z-index:5}
-.upload-zone input.disabled-upload{
-  pointer-events:none;
-  z-index:0;
-}
-.upload-zone input.disabled-upload{pointer-events:none}
-.placeholder{text-align:center;color:#475569;pointer-events:none}
-.icon{width:80px;height:80px;border-radius:50%;background:#dbeafe;display:flex;align-items:center;justify-content:center;font-size:32px;margin:0 auto 12px}
-.placeholder p{font-size:14px;font-weight:700}
-.placeholder small{display:block;margin-top:4px;font-size:12px;color:#94a3b8}
-#preview-img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:none;background:#f8fafc;z-index:2}
-
-.guide-line{
-  position:absolute;
-  left:0;
-  right:0;
-
-  height:2px;
-
-  display:none;
-  z-index:50;
-
-  cursor:ns-resize;
-  touch-action:none;
-}
-.guide-line::before{
-  content:'';
-  position:absolute;
-  left:0;
-  right:0;
-  top:-12px;
-  bottom:-12px;
-}
-
-.guide-line span{position:absolute;left:8px;top:-18px;font-size:11px;font-weight:800;padding:2px 7px;border-radius:999px;color:white; pointer-events:none;}
-#crown-line{top:80px;background:#ef4444}
-#crown-line span{background:#ef4444}
-#chin-line{top:210px;background:#2563eb}
-#chin-line span{background:#2563eb}
-.actions{display:flex;gap:8px;margin-top:12px}
-button{flex:1;border:0;border-radius:14px;padding:13px 10px;font-size:14px;font-weight:800;cursor:pointer}
-#detect-btn{background:#0f766e;color:white}
-#create-btn{background:#1e3a8a;color:white}
-#download-btn{width:100%;margin-top:8px;background:#eff6ff;color:#1e3a8a;border:1px solid #bfdbfe;display:none}
-#result-canvas{display:none;width:100%;margin-top:12px;border-radius:16px;background:white;border:1px solid #dbeafe}
-.new-photo-btn{
-  width:100%;
-  margin-top:8px;
-  background:#f8fafc;
-  color:#1e3a8a;
-  border:1px solid #bfdbfe;
-}
-.status{font-size:12px;color:#64748b;text-align:center;margin-top:8px;min-height:18px;line-height:1.5}
-.notice{
-  margin-top:10px;
-  padding:10px;
-  border-radius:12px;
-  background:#eff6ff;
-  color:#1e3a8a;
-  font-size:11px;
-  line-height:1.5;
-  text-align:left;
-}
-.notice a{
-    color:#1d4ed8;
-    font-weight:800;
-    text-decoration:underline;
-}
-
-/* ===== Result Panel ===== */
-
-.result-panel{
-    display:none;
-    margin-top:16px;
-    padding:14px;
-    border:1px solid #bfdbfe;
-    border-radius:18px;
-    background:#eff6ff;
-}
-
-.result-title{
-    font-weight:800;
-    color:#0b2a6f;
-    font-size:15px;
-    margin-bottom:4px;
-}
-
-.result-subtitle{
-    font-size:12px;
-    color:#475569;
-    margin-bottom:12px;
-}
-
-.result-canvas-wrap{
-    width:100%;
-    border-radius:16px;
-    overflow:hidden;
-    background:#fff;
-}
-
-.result-help{
-    margin-top:12px;
-    font-size:12px;
-    color:#475569;
-}
-
-.result-help a{
-    color:#2563eb;
-    font-weight:700;
-}
-
-</style>
-</head>
-<body>
-<div class="wrap">
-  <div class="upload-zone" id="upload-zone">
-    <input type="file" id="file-input" accept="image/*" />
-    <div class="placeholder" id="placeholder">
-      <div class="icon">📷</div>
-      <p>Upload your photo</p>
-      <small>Selected photo appears here</small>
-    </div>
-    <img id="preview-img" alt="preview" />
-    <div class="guide-line" id="crown-line"><span>Crown</span></div>
-    <div class="guide-line" id="chin-line"><span>Chin</span></div>
-  </div>
-
-  <div class="actions">
-    <button id="detect-btn" type="button">Auto Detect</button>
-<button id="create-btn" type="button">Create Photo</button>
-  </div>
-  <button id="new-photo-btn" type="button" class="new-photo-btn">
-  Choose Another Photo
-</button>
-
-  <div class="guide-note">
-  Auto detection is applied automatically.<br>
-  If the crown or chin line looks inaccurate,
-  drag the guide lines before creating your photo.
-</div>
-
- <button id="download-btn">
-  Unlock Download - $4.99
-</button>
-  <canvas id="result-canvas" width="600" height="600"></canvas>
-  <div class="status" id="status">Upload a photo first</div>
-</div>
-<div class="notice" id="uploadTips">
-  <strong>Before uploading:</strong><br>
-  Look directly at the camera · Keep both eyes open · Keep your mouth closed · Do not wear hats or sunglasses.
-  <br><br>
-  For special cases or manual review, contact:
-  <a href="mailto:usvisaphoto1@gmail.com">usvisaphoto1@gmail.com</a>
-</div>
-
-<div id="resultPanel" class="result-panel">
-  <div class="result-title">Preview Result</div>
-  <div class="result-subtitle">
-    Face area is blurred and watermarked until payment.
-  </div>
-
-  <div class="result-canvas-wrap"></div>
-
-  <div class="result-help">
-    Need help? Contact
-    <a href="mailto:usvisaphoto1@gmail.com">usvisaphoto1@gmail.com</a>
-  </div>
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
-
-<script>
+export const uploadBoxLogic = String.raw`
 const fileInput = document.getElementById('file-input');
 const zone = document.getElementById('upload-zone');
 const previewImg = document.getElementById('preview-img');
@@ -203,6 +11,7 @@ const newPhotoBtn = document.getElementById('new-photo-btn');
 const downloadBtn = document.getElementById('download-btn');
 const canvas = document.getElementById('result-canvas');
 const statusEl = document.getElementById('status');
+const resultPanel = document.getElementById('resultPanel');
 const uploadTips = document.getElementById('uploadTips');
 const ctx = canvas.getContext('2d');
 
@@ -315,6 +124,8 @@ if (window.parent.location.search.includes('paid=1')) {
 
   canvas.style.display = 'none';
   downloadBtn.style.display = 'none';
+  if (resultPanel) resultPanel.style.display = 'none';
+  if (uploadTips) uploadTips.style.display = 'block';
   
   previewImg.style.display = "none";
   previewImg.src = "";
@@ -748,6 +559,8 @@ const protectedPreviewUrl = canvas.toDataURL('image/jpeg', 0.92);
 window.parent.localStorage.setItem('usvisa_protected_preview', protectedPreviewUrl);
 
 if (uploadTips) uploadTips.style.display = 'none';
+if (resultPanel) resultPanel.style.display = 'block';
+
 canvas.style.display = 'block';
 canvas.style.width = '100%';
 canvas.style.height = 'auto';
@@ -765,7 +578,6 @@ downloadBtn.style.marginBottom = '14px';
 
 
  } catch (err) {
-scrollToResultPreview();
 
 statusEl.style.display = 'block';
 statusEl.style.marginTop = '16px';
@@ -831,6 +643,9 @@ function restorePaidDownloadIfAvailable() {
     
     ctx.drawImage(paidImg, 0, 0, TARGET, TARGET);
 
+    if (uploadTips) uploadTips.style.display = 'none';
+    if (resultPanel) resultPanel.style.display = 'block';
+
     canvas.style.display = 'block';
     downloadBtn.style.display = 'block';
     downloadBtn.disabled = false;
@@ -864,15 +679,11 @@ function restoreUnpaidPreviewIfAvailable() {
     ctx.fillRect(0, 0, TARGET, TARGET);
     ctx.drawImage(preview, 0, 0, TARGET, TARGET);
 
+    if (uploadTips) uploadTips.style.display = 'none';
+    if (resultPanel) resultPanel.style.display = 'block';
+
     canvas.style.display = 'block';
 
-// 모바일에서 결과 사진 위치로 자동 이동
-setTimeout(() => {
-  canvas.scrollIntoView({
-    behavior: 'smooth',
-    block: 'center'
-  });
-}, 300);
 
 downloadBtn.style.display = 'block';
 downloadBtn.disabled = false;
@@ -945,24 +756,4 @@ downloadBtn.addEventListener('click', async function() {
     downloadBtn.textContent = 'Unlock Download - $4.99';
   }
 });
-</script>
-</body>
-</html>
 `;
-
-export default function HomePage() {
-  return (
-    <main className="min-h-screen bg-gradient-to-br from-blue-950 via-blue-900 to-slate-950 text-white">
-      
-      
-      <HeroUploadSection />
-
-      <TrustIntroSection />
-
-      <BeforeAfterSection />
-      <ReviewSection />
-      <GuaranteeSection />
-      <HomeTrustSections /> 
-    </main>
-  );
-}

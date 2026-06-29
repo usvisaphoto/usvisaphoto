@@ -14,11 +14,22 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "USVisaPhoto | Embassy-Ready U.S. Visa & Passport Photos",
-  description:
-    "Create embassy-ready U.S. visa and passport photos online with secure processing, white background, and instant download.",
-};
+  title: "Embassy-Ready U.S. Visa & Passport Photos | USVisaPhoto",
 
+  description:
+    "Create U.S. visa and passport photos online. Automatic background removal, correct 2x2 size, proper head alignment, instant download, built on 25 years of professional studio standards.",
+
+  keywords: [
+    "US visa photo",
+    "US passport photo",
+    "2x2 visa photo",
+    "passport photo online",
+    "visa photo maker",
+    "embassy ready photo",
+    "passport photo generator",
+    "US visa photo online",
+  ],
+};
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -26,7 +37,7 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="en"
+      lang="en-US"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-slate-950">
