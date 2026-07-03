@@ -49,7 +49,19 @@ html,body{width:100%;height:100%;background:#f8fafc;font-family:system-ui}
 button{flex:1;border:0;border-radius:14px;padding:13px 10px;font-size:14px;font-weight:800;cursor:pointer}
 #detect-btn{background:#0f766e;color:white}
 #create-btn{background:#1e3a8a;color:white}
-#download-btn{width:100%;margin-top:8px;background:#eff6ff;color:#1e3a8a;border:1px solid #bfdbfe;display:none}
+#download-btn{
+  width:100%;
+  margin-top:12px;
+  min-height:58px;
+  background:linear-gradient(135deg,#16a34a,#15803d);
+  color:#ffffff;
+  border:0;
+  border-radius:16px;
+  display:none;
+  font-size:16px;
+  font-weight:900;
+  box-shadow:0 12px 24px rgba(22,163,74,0.28); 
+}
 #result-canvas{display:none;width:100%;height:auto;max-height:360px;object-fit:contain;border-radius:16px;background:white;border:1px solid #dbeafe}
 .new-photo-btn{
   width:100%;
@@ -100,12 +112,55 @@ button{flex:1;border:0;border-radius:14px;padding:13px 10px;font-size:14px;font-
 }
 
 .result-canvas-wrap{
+    position:relative;
     width:100%;
     border-radius:16px;
     overflow:hidden;
     background:#fff;
 }
 
+.result-badge{
+
+    position:absolute;
+
+    top:14px;
+
+    left:14px;
+
+    z-index:100;
+
+    padding:10px 14px;
+
+    border-radius:14px;
+
+    background:rgba(15,118,110,.94);
+
+    color:white;
+
+    box-shadow:0 10px 28px rgba(0,0,0,.18);
+
+    backdrop-filter:blur(8px);
+
+}
+
+.badge-title{
+
+    font-size:13px;
+
+    font-weight:800;
+
+}
+
+.badge-subtitle{
+
+    margin-top:2px;
+
+    font-size:11px;
+
+    opacity:.92;
+
+}
+    
 .result-help{
     margin-top:12px;
     font-size:12px;
@@ -162,5 +217,18 @@ button{flex:1;border:0;border-radius:14px;padding:13px 10px;font-size:14px;font-
   border-color:#fde68a;
   color:#78350f;
 }
+.detect-auto{
+    background:#1d4ed8 !important;
+    color:#fff !important;
+}
 
+.detect-success{
+    background:#10b981 !important;
+    color:#fff !important;
+}
+
+.detect-manual{
+    background:#f59e0b !important;
+    color:#fff !important;
+}
 `;

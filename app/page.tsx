@@ -155,9 +155,7 @@ button{flex:1;border:0;border-radius:14px;padding:13px 10px;font-size:14px;font-
 </button>
 
   <div class="guide-note">
-  Auto detection is applied automatically.<br>
-  If the crown or chin line looks inaccurate,
-  drag the guide lines before creating your photo.
+  Your photo has been automatically checked and is ready to create.
 </div>
 
  <button id="download-btn">
@@ -683,9 +681,22 @@ createBtn.addEventListener('click', async function(e) {
     
     
 
-    const crownY = imageYFromLine(crownLine);
-    const chinY = imageYFromLine(chinLine);
-    const headPxOriginal = chinY - crownY;
+    const crownY = lockedDetection?.crownY;
+const chinY = lockedDetection?.chinY;
+
+if (
+  !lockedDetection ||
+  !Number.isFinite(crownY) ||
+  !Number.isFinite(chinY) ||
+  chinY <= crownY
+) {
+  statusEl.textContent = 'Please click Auto Detect before creating your photo.';
+  createBtn.disabled = false;
+  createBtn.textContent = 'Create Photo';
+  return;
+}
+
+const headPxOriginal = chinY - crownY;
 
     if (headPxOriginal <= 10) {
       statusEl.textContent = 'Chin line must be below Crown line.';

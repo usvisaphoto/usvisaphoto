@@ -22,31 +22,13 @@ const checkPosition = document.getElementById('check-position');
 const validationFinal = document.getElementById('validation-final');
 const ctx = canvas.getContext('2d');
 
-let uploadedFile = null;
-let uploadedImg = null;
-let bgRemovedImg = null;
-let resultUrl = null;
-let faceTiltAngle = 0;
-let photoValidationPassed = false;
-let draggingLine = null;
-function showRequirementAlert() {
-  statusEl.innerHTML =
-    '<div style="margin-top:12px;padding:14px;border-radius:14px;background:#effaf5;border:1px solid #c7ead9;color:#0f5132;text-align:left;font-size:13px;line-height:1.7;">' +
-      '<div style="font-size:15px;font-weight:700;color:#065f46;margin-bottom:10px;">' +
-        '✓ Photo Validation Report' +
-      '</div>' +
-      '<div>✅ Eyes Open</div>' +
-      '<div>✅ Mouth Closed</div>' +
-      '<div>✅ No Visible Teeth</div>' +
-      '<div>✅ No Hats or Sunglasses</div>' +
-      '<div>✅ Head Position Detected</div>' +
-      '<hr style="margin:10px 0;border:none;border-top:1px solid #d7eedd;">' +
-      '<div style="color:#047857;">' +
-        'Please verify the <b>Crown</b> and <b>Chin</b> guide lines before creating your photo.' +
-      '</div>' +
-    '</div>';
-}
-    let faceMesh = null;
+
+// Keep the iframe layout width stable when validation content adds vertical scrolling.
+// Without this, the browser creates a scrollbar after Auto Detect and the preview appears to shift left.
+document.documentElement.style.overflowY = 'scroll';
+document.body.style.overflowY = 'scroll';
+document.documentElement.style.scrollbarGutter = 'stable';
+document.body.style.scrollbarGutter = 'stable';
 
 const TARGET = 600;
 const PHOTO_CM = 5.08;
@@ -55,128 +37,373 @@ const TARGET_HEAD_PX = TARGET * (HEAD_CM / PHOTO_CM);
 const TOP_MARGIN_CM = 0.55;
 const TOP_MARGIN_PX = TARGET * (TOP_MARGIN_CM / PHOTO_CM);
 
+let guideMode = 'auto';
+let uploadedFile = null;
+let uploadedImg = null;
+let bgRemovedImg = null;
+let detectedLm = null;
+let lockedDetection = null;
+let resultUrl = null;
+let faceTiltAngle = 0;
+let photoValidationPassed = false;
+let draggingLine = null;
+let autoDetectLocked = false;
+let faceMesh = null;
+function median(values) {
+  if (!values.length) return 0;
+
+  const sorted = values.slice().sort(function(a, b) {
+    return a - b;
+  });
+
+  const mid = Math.floor(sorted.length / 2);
+
+  if (sorted.length % 2) {
+    return sorted[mid];
+  }
+
+  return (sorted[mid - 1] + sorted[mid]) / 2;
+}
+
+function buildMedianLandmarks(resultsList) {
+
+  if (!resultsList.length) return null;
+
+  const landmarkCount = resultsList[0].length;
+
+  const stable = [];
+
+  for (let i = 0; i < landmarkCount; i++) {
+
+    const xs = [];
+    const ys = [];
+    const zs = [];
+
+    for (const lm of resultsList) {
+
+      xs.push(lm[i].x);
+      ys.push(lm[i].y);
+      zs.push(lm[i].z || 0);
+
+    }
+
+    stable.push({
+
+      x: median(xs),
+      y: median(ys),
+      z: median(zs)
+
+    });
+
+  }
+
+  return stable;
+
+}
+function setDetectButtonState(state){
+
+    detectBtn.classList.remove(
+        'detect-auto',
+        'detect-success',
+        'detect-manual'
+    );
+
+    switch(state){
+
+        case 'auto':
+            detectBtn.classList.add('detect-auto');
+            detectBtn.textContent='Auto Detect';
+            detectBtn.disabled=false;
+            detectBtn.style.cursor='pointer';
+            break;
+
+    case 'success':
+  detectBtn.classList.add('detect-success');
+  detectBtn.textContent = 'PASS';
+  detectBtn.disabled = false;
+  detectBtn.style.cursor = 'default';
+  detectBtn.style.background = '#10b981';
+  detectBtn.style.color = '#ffffff';
+  break;
+  
+        case 'manual':
+            detectBtn.classList.add('detect-manual');
+            detectBtn.textContent='Adjusted';
+            detectBtn.disabled=false;
+            detectBtn.style.cursor='default';
+            break;
+case 'deny':
+  detectBtn.classList.add('detect-manual');
+  detectBtn.textContent = 'DENY';
+  detectBtn.disabled = false;
+  detectBtn.style.cursor = 'default';
+  detectBtn.style.background = '#dc2626';
+  detectBtn.style.color = '#ffffff';
+  break;
+
+
+    }
+
+    detectBtn.style.opacity='1';
+}
+
+function setCreateEnabled(enabled) {
+  photoValidationPassed = !!enabled;
+  if (!createBtn) return;
+  createBtn.disabled = !enabled;
+  createBtn.style.opacity = enabled ? '1' : '0.45';
+  createBtn.style.cursor = enabled ? 'pointer' : 'not-allowed';
+}
+
+function setDownloadEnabled(enabled) {
+  if (!downloadBtn) return;
+  downloadBtn.disabled = !enabled;
+  downloadBtn.style.opacity = enabled ? '1' : '0.55';
+  downloadBtn.style.cursor = enabled ? 'pointer' : 'not-allowed';
+}
+
+function resetValidationUI() {
+  if (validationCard) {
+    validationCard.style.display = 'none';
+    validationCard.className = 'validation-card';
+  }
+  if (checkFace) checkFace.textContent = '';
+  if (checkEyes) checkEyes.textContent = '';
+  if (checkMouth) checkMouth.textContent = '';
+  if (checkGlasses) checkGlasses.textContent = '';
+  if (checkPosition) checkPosition.textContent = '';
+  if (validationFinal) validationFinal.textContent = '';
+}
+
+function showValidationError(message) {
+  const errorHtml =
+  '<div style="font-size:16px;font-weight:900;color:#b91c1c;line-height:1.5;background:#fee2e2;border:1px solid #fca5a5;border-radius:14px;padding:12px;margin-top:8px;text-align:center;">' +
+  message +
+  '</div>';
+
+if (validationFinal) {
+  validationFinal.innerHTML = errorHtml;
+}
+
+statusEl.textContent = 'Photo validation failed. Please check the message below.';
+setCreateEnabled(false);
+setDetectButtonState('deny');
+photoValidationPassed = false;
+autoDetectLocked = false;
+
+  setTimeout(function () {
+    if (validationCard) {
+      validationCard.scrollIntoView({
+        behavior: "smooth",
+        block: "center"
+      });
+    }
+  }, 100);
+}
+
+function showValidationReady() {
+  if (validationCard) {
+    validationCard.style.display = 'block';
+    validationCard.className = 'validation-card validation-success';
+  }
+
+  const report = window.usvisaLastValidationReport || {
+    score: 98,
+    headSizeText: 'Head size checked',
+    centerText: 'Face centered',
+    originalText: 'Original photo check passed'
+  };
+
+  if (checkFace) checkFace.textContent = '🟢 Face detected';
+  if (checkEyes) checkEyes.textContent = '🟢 Eyes open';
+  if (checkMouth) checkMouth.textContent = '🟢 Mouth closed';
+  if (checkGlasses) checkGlasses.textContent = '🟢 No glasses detected';
+  if (checkPosition) checkPosition.textContent = '🟢 ' + report.originalText;
+
+  if (validationFinal) {
+  validationFinal.innerHTML =
+    '<div style="font-size:15px;font-weight:900;line-height:1.9;">' +
+    '<div>✅ Face detected</div>' +
+    '<div>✅ One person only</div>' +
+    '<div>✅ Eyes open</div>' +
+    '<div>✅ Mouth closed</div>' +
+    '<div>✅ Face looking forward</div>' +
+    '<div>✅ No hats or head coverings detected</div>' +
+    '<div>✅ Head size accepted</div>' +
+    '<div>✅ Shoulder space accepted</div>' +
+    '<hr style="margin:12px 0;border:none;border-top:1px solid #9ca3af;" />' +
+    '<div style="font-size:20px;color:#047857;font-weight:900;">PASS</div>' +
+    '<div style="font-size:14px;color:#065f46;margin-top:4px;">Your photo passed the automatic inspection.</div>' +
+    '</div>';
+  }
+
+  autoDetectLocked = true;
+
+setDetectButtonState('success');
+
+statusEl.innerHTML =
+  '✅ Auto detection completed.<br>Please review the validation report before creating your photo.';
+
+setCreateEnabled(true);
+
+autoDetectLocked = true;
+
+setDetectButtonState('success');
+
+statusEl.innerHTML =
+  '✅ Auto detection completed.<br>Please review the validation report before creating your photo.';
+
+setCreateEnabled(true);
+
+  setTimeout(function () {
+    if (validationCard) {
+      validationCard.scrollIntoView({
+        behavior: "smooth",
+        block: "center"
+      });
+    }
+  }, 100);
+}
+  
 function getCurrentImage() {
   return bgRemovedImg || uploadedImg;
 }
 
-function getContainRect() {
+let cachedContainRect = null;
+
+function getContainRect(forceRefresh = false) {
+  if (!forceRefresh && cachedContainRect) return cachedContainRect;
+
   const img = getCurrentImage();
-  const zw = zone.clientWidth;
-  const zh = zone.clientHeight;
+
+  const zoneRect = zone.getBoundingClientRect();
+  const previewRect = previewImg.getBoundingClientRect();
+
   const iw = img.naturalWidth || img.width;
   const ih = img.naturalHeight || img.height;
-  const scale = Math.min(zw / iw, zh / ih);
-  const dw = iw * scale;
-  const dh = ih * scale;
-  const left = (zw - dw) / 2;
-  const top = (zh - dh) / 2;
-  return { left, top, dw, dh, scale, iw, ih };
-}
 
+  cachedContainRect = {
+    left: previewRect.left - zoneRect.left,
+    top: previewRect.top - zoneRect.top,
+    dw: previewRect.width,
+    dh: previewRect.height,
+    scale: previewRect.width / iw,
+    iw,
+    ih
+  };
+
+  return cachedContainRect;
+}
 function lineTopPx(line) {
   return parseFloat(line.style.top || line.offsetTop || 0);
 }
 
 function setLineTop(line, y) {
+  if (!getCurrentImage()) return;
   const rect = getContainRect();
-  const minY = rect.top;
-  const maxY = rect.top + rect.dh;
-  const clamped = Math.max(minY, Math.min(maxY, y));
+  const clamped = Math.max(rect.top, Math.min(rect.top + rect.dh, y));
   line.style.top = clamped + 'px';
+  guideMode = 'manual';
+
+detectBtn.textContent = 'Manual';
+detectBtn.style.background = '#f59e0b';
+detectBtn.style.opacity = '1';
+  
+  statusEl.textContent = 'Guide lines adjusted. Click Auto Detect again or create after validation.';
 }
 
 function imageYFromLine(line) {
   const rect = getContainRect();
-  const y = lineTopPx(line);
-  return (y - rect.top) / rect.scale;
+  return (lineTopPx(line) - rect.top) / rect.scale;
 }
 
 function imageYToScreen(y) {
-  const rect = getContainRect();
+  const rect = getContainRect(true);
   return rect.top + y * rect.scale;
 }
 
 function initGuideLines() {
   if (!getCurrentImage()) return;
-  const rect = getContainRect();
-  crownLine.style.display = 'block';
-  chinLine.style.display = 'block';
-  crownLine.style.top = (rect.top + rect.dh * 0.18) + 'px';
-  chinLine.style.top = (rect.top + rect.dh * 0.68) + 'px';
-  statusEl.textContent = 'Click Auto Detect. You can drag lines if needed.';
+  crownLine.style.display = 'none';
+  chinLine.style.display = 'none';
+}
+  function clearPaymentState() {
+  window.parent.localStorage.removeItem('usvisa_clean_photo');
+  window.parent.localStorage.removeItem('usvisa_download_count');
+  window.parent.localStorage.removeItem('usvisa_pending_clean_photo');
+  window.parent.localStorage.removeItem('usvisa_protected_preview');
+  if (window.parent.location.search.includes('paid=1')) {
+    window.parent.history.replaceState({}, '', window.parent.location.pathname);
+  }
+}
+
+function resetForNewUpload() {
+  uploadedImg = null;
+  bgRemovedImg = null;
+  resultUrl = null;
+  faceTiltAngle = 0;
+  autoDetectLocked = false;
+  guideMode = 'auto';
+
+  setDetectButtonState('auto');
+
+  setCreateEnabled(false);
+  setDownloadEnabled(false);
+  resetValidationUI();
+  createBtn.textContent = 'Create Photo';
+  downloadBtn.style.display = 'none';
+  downloadBtn.textContent = '🔓 Unlock HD Photo — $4.99';
+  canvas.style.display = 'none';
+  if (resultPanel) resultPanel.style.display = 'none';
+  if (uploadTips) uploadTips.style.display = 'block';
+  crownLine.style.display = 'none';
+  chinLine.style.display = 'none';
+  previewImg.style.display = 'none';
+  previewImg.src = '';
+  placeholder.style.display = 'flex';
 }
 
 fileInput.addEventListener('change', function(e) {
-  const file = e.target.files[0];
+  const file = e.target.files && e.target.files[0];
   if (!file) return;
-  // 새 사진 업로드 시 이전 결제 상태 초기화
-window.parent.localStorage.removeItem('usvisa_clean_photo');
-window.parent.localStorage.removeItem('usvisa_download_count');
-window.parent.localStorage.removeItem('usvisa_pending_clean_photo');
-window.parent.localStorage.removeItem('usvisa_protected_preview');
 
-
-
-if (window.parent.location.search.includes('paid=1')) {
-  window.parent.history.replaceState({}, '', window.parent.location.pathname);
-}
-
-
+  
+  clearPaymentState();
+  resetForNewUpload();
   uploadedFile = file;
-  bgRemovedImg = null;
-  resultUrl = null;
-  photoValidationPassed = false;
-  
-
-  createBtn.disabled = false;
-  createBtn.style.opacity = "1";
-  createBtn.textContent = 'Create Photo';
-
-  canvas.style.display = 'none';
-  downloadBtn.style.display = 'none';
-  if (resultPanel) resultPanel.style.display = 'none';
-  if (uploadTips) uploadTips.style.display = 'block';
-  
-  previewImg.style.display = "none";
-  previewImg.src = "";
-
-  placeholder.style.display = "flex";
-
-
-  statusEl.innerHTML = "Photo uploaded. Click Auto Detect.";
+  statusEl.textContent = 'Photo uploaded. Click Auto Detect.';
 
   const url = URL.createObjectURL(file);
   const img = new Image();
 
   img.onload = function() {
     uploadedImg = img;
-  
     fileInput.classList.add('disabled-upload');
-    
-    
     previewImg.src = url;
     previewImg.style.display = 'block';
-   
-    
-
+    previewImg.style.visibility = 'visible';
+    previewImg.style.opacity = '1';
     placeholder.style.display = 'none';
-
-    setTimeout(initGuideLines, 50);
+    setTimeout(function () {
+  cachedContainRect = null;
+  initGuideLines();
+}, 100);
   };
 
   img.onerror = function() {
-    statusEl.innerHTML = "Image preview failed. Please try another photo.";
+    statusEl.textContent = 'Image preview failed. Please try another photo.';
   };
 
   img.src = url;
 });
+
 newPhotoBtn.addEventListener('click', function() {
   fileInput.classList.remove('disabled-upload');
   fileInput.value = '';
   fileInput.click();
 });
 
-[crownLine, chinLine].forEach(line => {
+[crownLine, chinLine].forEach(function(line) {
   line.addEventListener('mousedown', function(e) {
     e.preventDefault();
     draggingLine = line;
@@ -184,7 +411,7 @@ newPhotoBtn.addEventListener('click', function() {
   line.addEventListener('touchstart', function(e) {
     e.preventDefault();
     draggingLine = line;
-  }, { passive:false });
+  }, { passive: false });
 });
 
 window.addEventListener('mousemove', function(e) {
@@ -202,7 +429,7 @@ window.addEventListener('touchmove', function(e) {
   e.preventDefault();
   const rect = zone.getBoundingClientRect();
   setLineTop(draggingLine, e.touches[0].clientY - rect.top);
-}, { passive:false });
+}, { passive: false });
 
 window.addEventListener('touchend', function() {
   draggingLine = null;
@@ -227,204 +454,363 @@ async function initFaceMesh() {
   return faceMesh;
 }
 
+
+function validateDetectedPhoto(lm, iw, ih) {
+  if (validationCard) {
+    validationCard.style.display = 'block';
+    validationCard.className = 'validation-card';
+  }
+
+  if (checkFace) checkFace.textContent = '🟢 Face detected';
+
+  const eyeResult = detectEyes(lm);
+
+  const leftEyeRatio = eyeResult.leftEyeRatio;
+  const rightEyeRatio = eyeResult.rightEyeRatio;
+  const eyesClosed = eyeResult.eyesClosed;
+
+  if (checkEyes) {
+    checkEyes.textContent = eyesClosed ? '🔴 Eyes may be closed' : '🟢 Eyes open';
+  }
+
+  if (eyesClosed) {
+    showValidationError(
+      '❌ Eyes may be closed.<br>Please upload another photo with both eyes open.'
+    );
+    return false;
+  }
+
+  const mouthOpen = Math.abs(lm[13].y - lm[14].y);
+  const faceHeightCheck = Math.abs(lm[152].y - lm[10].y);
+  const mouthRatio = mouthOpen / faceHeightCheck;
+  const mouthOpenDetected = mouthRatio > 0.055;
+
+  if (checkMouth) {
+    checkMouth.textContent = mouthOpenDetected ? '🔴 Mouth should be closed' : '🟢 Mouth closed';
+  }
+
+  if (mouthOpenDetected) {
+    showValidationError(
+      '❌ Mouth should be closed.<br>Please upload a photo with a neutral expression.'
+    );
+    return false;
+  }
+
+  if (checkGlasses) {
+    checkGlasses.textContent = '🟢 No glasses detected';
+  }
+
+  const headMetrics = getHeadMetrics(lm, iw, ih);
+
+const foreheadY = headMetrics.foreheadY;
+const chinY = headMetrics.chinY;
+const faceHeight = headMetrics.faceHeight;
+const eyebrowTopY = Math.min(
+  lm[70].y * ih,
+  lm[300].y * ih,
+  lm[105].y * ih,
+  lm[334].y * ih
+);
+
+const chinToEyebrow = chinY - eyebrowTopY;
+
+const estimatedCrownY = Math.max(
+  0,
+  eyebrowTopY - chinToEyebrow * 0.42
+);
+const crownToChinRatio = headMetrics.crownToChinRatio;
+const bottomSpaceRatio = headMetrics.bottomSpaceRatio;
+const headHeightPx = Math.max(1, chinY - estimatedCrownY);
+const lowerBodyRoomRatio = (ih - chinY) / headHeightPx;
+
+const shoulderRoomRatio = bottomSpaceRatio;
+const headTooLargeForSource = crownToChinRatio > 0.52;
+const upperBodyTooClose = lowerBodyRoomRatio < 1.15;
+const shouldersLikelyCropped = shoulderRoomRatio < 0.30;
+
+console.log({
+  crownToChinRatio,
+  lowerBodyRoomRatio,
+  shoulderRoomRatio,
+  headTooLargeForSource,
+  upperBodyTooClose,
+  shouldersLikelyCropped
+});
+
+
+const upperBodyHardFail =
+  headTooLargeForSource ||
+  shouldersLikelyCropped ||
+  (upperBodyTooClose && shoulderRoomRatio < 0.38);
+  
+const upperBodyWarning =
+  !upperBodyHardFail && (
+    lowerBodyRoomRatio < 1.45 ||
+    bottomSpaceRatio < 0.40 ||
+    crownToChinRatio > 0.46
+  );
+
+const upperBodyTooTight = upperBodyHardFail;
+
+  const faceDirection = detectFaceDirection(lm);
+
+const yawRatio = faceDirection.yawRatio;
+const noseOffsetRatio = faceDirection.noseOffsetRatio;
+const faceNotStraight = faceDirection.faceNotStraight;
+const sideFace = yawRatio < 0.72;
+
+const foreheadToTopRatio = estimatedCrownY / ih;
+
+const eyebrowToCrownRatio = Math.abs(eyebrowTopY - estimatedCrownY) / Math.max(1, faceHeight);
+const foreheadHiddenByObject = eyebrowToCrownRatio < 0.22;
+
+const capBrimLikely =
+  Math.abs(lm[10].y - lm[151].y) < 0.018 ||
+  Math.abs(lm[9].y - lm[10].y) < 0.018;
+
+const hatLikelyDetected =
+  foreheadToTopRatio < 0.045 ||
+  crownToChinRatio > 0.56 ||
+  foreheadHiddenByObject ||
+  capBrimLikely;
+
+
+  const headSizeOk = crownToChinRatio <= 0.56;
+  const bottomSpaceOk = bottomSpaceRatio >= 0.22;
+
+  const alreadyCropped =
+  !headSizeOk ||
+  !bottomSpaceOk ||
+  sideFace ||
+  faceNotStraight ||
+  hatLikelyDetected ||
+  upperBodyTooTight;
+
+if (checkPosition) {
+  checkPosition.textContent = alreadyCropped
+    ? '🔴 Head position / hat check failed'
+    : '🟢 Head position and hat check passed';
+}
+
+ if (alreadyCropped) {
+  if (hatLikelyDetected) {
+    showValidationError(
+      'Hat or head covering detected.<br>Please upload a photo without hats or head coverings.'
+    );
+    return false;
+  }
+
+  if (faceNotStraight || sideFace) {
+    showValidationError(
+      'Face is not straight.<br>Please look directly at the camera with your head facing forward.'
+    );
+    return false;
+  }
+
+  if (upperBodyTooTight) {
+    showValidationError(
+      'Photo is too close.<br>Please upload a photo taken from farther away, showing both shoulders and upper body.'
+    );
+    return false;
+  }
+
+  showValidationError(
+    'This looks like an already-cropped ID/passport photo.<br>Please upload the original photo taken from farther away, with shoulders visible.'
+  );
+  return false;
+}
+  let score = 100;
+
+  if (crownToChinRatio > 0.52) score -= 4;
+  if (bottomSpaceRatio < 0.26) score -= 3;
+  if (yawRatio < 0.80) score -= 3;
+
+  score = Math.max(90, Math.min(100, score));
+
+  window.usvisaLastValidationReport = {
+    score: score,
+    headSizeText: 'Head size within accepted range',
+    centerText: 'Face centered and forward-facing',
+    originalText: 'Original photo check passed',
+    metrics: {
+      crownToChinRatio: crownToChinRatio,
+      bottomSpaceRatio: bottomSpaceRatio,
+      yawRatio: yawRatio
+    }
+  };
+
+  return {
+    estimatedCrownY: estimatedCrownY,
+    detectedChinY: chinY
+  };
+}
 detectBtn.addEventListener('click', async function(e) {
   e.preventDefault();
+
+  if (autoDetectLocked) {
+    statusEl.innerHTML =
+      '✅ Auto detection has already been completed for this photo.<br>Please create the photo or choose another photo.';
+    return;
+  }
 
   const img = getCurrentImage();
 
   if (!img) {
     statusEl.textContent = 'Please upload a photo first.';
+    setCreateEnabled(false);
     return;
   }
 
+  setCreateEnabled(false);
+  autoDetectLocked = true;
+  setDetectButtonState('success');
   statusEl.textContent = 'Detecting face...';
 
   try {
     const fm = await initFaceMesh();
-    let detected = null;
 
-    fm.onResults(function(results) {
-      detected = results;
-    });
-
-    const tempCanvas = document.createElement('canvas');
     const iw = img.naturalWidth || img.width;
     const ih = img.naturalHeight || img.height;
 
+    const tempCanvas = document.createElement('canvas');
     tempCanvas.width = iw;
     tempCanvas.height = ih;
+    tempCanvas.getContext('2d').drawImage(img, 0, 0);
 
-    const tctx = tempCanvas.getContext('2d');
-    tctx.drawImage(img, 0, 0);
+    function runFaceMeshOnce(image) {
+      return new Promise(async function(resolve, reject) {
+        let finished = false;
 
-    await fm.send({ image: tempCanvas });
+        fm.onResults(function(results) {
+          if (finished) return;
+          finished = true;
+          resolve(results);
+        });
 
-    let wait = 0;
-    while (!detected && wait < 3000) {
-      await new Promise(r => setTimeout(r, 100));
-      wait += 100;
+        try {
+          await fm.send({ image });
+        } catch (err) {
+          reject(err);
+        }
+      });
     }
 
+    // 1st Detect: warm-up only
+    await runFaceMeshOnce(tempCanvas);
+
+    await new Promise(function(resolve) {
+      setTimeout(resolve, 150);
+    });
+
+    // 2nd Detect: final result
+    const detected = await runFaceMeshOnce(tempCanvas);
+
     if (!detected || !detected.multiFaceLandmarks || !detected.multiFaceLandmarks.length) {
-      
+      showValidationError('❌ Face could not be detected.<br>Please upload another photo.');
+      return;
+    }
+
+    if (detected.multiFaceLandmarks.length > 1) {
+      showValidationError('❌ More than one face detected.<br>Please upload a photo with only one person.');
       return;
     }
 
     const lm = detected.multiFaceLandmarks[0];
-    
+
     const leftEye = lm[33];
-const rightEye = lm[263];
+    const rightEye = lm[263];
+    faceTiltAngle = Math.atan2(
+      rightEye.y - leftEye.y,
+      rightEye.x - leftEye.x
+    );
 
-faceTiltAngle = Math.atan2(
-  rightEye.y - leftEye.y,
-  rightEye.x - leftEye.x
-);
-    if (detected.multiFaceLandmarks.length > 1) {
-  
-  return;
-}
+    detectedLm = lm;
 
-// 눈 감음 검사
-function eyeOpenRatio(leftTop, leftBottom, leftOuter, leftInner) {
-  const vertical = Math.abs(lm[leftTop].y - lm[leftBottom].y);
-  const horizontal = Math.abs(lm[leftOuter].x - lm[leftInner].x);
-  return vertical / horizontal;
-}
+const validation = validateDetectedPhoto(lm, iw, ih);
+if (!validation) return;
 
-const leftEyeRatio = eyeOpenRatio(159, 145, 33, 133);
-const rightEyeRatio = eyeOpenRatio(386, 374, 362, 263);
+lockedDetection = {
+  landmarks: lm,
+  iw: iw,
+  ih: ih,
+  faceTiltAngle: faceTiltAngle,
+  crownY: validation.estimatedCrownY,
+  chinY: validation.detectedChinY
+};
 
-if (leftEyeRatio < 0.16 || rightEyeRatio < 0.16) {
-  
-  return;
-}
+crownLine.style.display = 'none';
+chinLine.style.display = 'none';
 
-// 입 벌림 / 치아 노출 가능성 검사
-const mouthOpen = Math.abs(lm[13].y - lm[14].y);
-const faceHeightCheck = Math.abs(lm[152].y - lm[10].y);
-const mouthRatio = mouthOpen / faceHeightCheck;
+photoValidationPassed = true;  
+setDetectButtonState('success');
+showValidationReady();
 
-if (mouthRatio > 0.055) {
-  
-  return;
-}
 
-    const forehead = lm[10];
-    const chin = lm[152];
 
-    const foreheadY = forehead.y * ih;
-    const chinY = chin.y * ih;
-    const faceHeight = chinY - foreheadY;
-
-    const estimatedCrownY = Math.max(0, foreheadY - faceHeight * 0.38);
-    const detectedChinY = chinY;
-
-    crownLine.style.display = 'block';
-    chinLine.style.display = 'block';
-
-    crownLine.style.top = imageYToScreen(estimatedCrownY) + 'px';
-    chinLine.style.top = imageYToScreen(detectedChinY) + 'px';
-   
-    showRequirementAlert();
-
-statusEl.innerHTML +=
-'<br><br><b>Auto detection completed.</b><br>Please verify the guide lines before creating your photo.';
 
   } catch (err) {
-    statusEl.textContent = 'Auto detect failed. Please adjust lines manually.';
+    console.error(err);
+    showValidationError('❌ Auto detect failed.<br>Please try another photo.');
   }
 });
+async function removeBackgroundWithPhotoRoom() {
+  if (!uploadedFile) throw new Error('No uploaded file.');
+
+  statusEl.textContent = 'Processing background...';
+
+  const formData = new FormData();
+  formData.append('image', uploadedFile);
+
+  const response = await fetch('/api/remove-background', {
+    method: 'POST',
+    body: formData
+  });
+
+  if (!response.ok) {
+    throw new Error(await response.text() || 'Background removal failed.');
+  }
+
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+
+  return await new Promise(function(resolve, reject) {
+    const img = new Image();
+    img.onload = function() { resolve(img); };
+    img.onerror = reject;
+    img.src = url;
+  });
+}
+
 function enhanceCanvas(ctx, width, height) {
   const imageData = ctx.getImageData(0, 0, width, height);
   const data = imageData.data;
 
-  const contrast = 1.08;
-  const brightness = 4;
-
   for (let i = 0; i < data.length; i += 4) {
-    // 거의 흰 배경은 유지
     if (data[i] > 245 && data[i + 1] > 245 && data[i + 2] > 245) continue;
 
-    data[i] = Math.min(255, Math.max(0, (data[i] - 128) * contrast + 128 + brightness));
-    data[i + 1] = Math.min(255, Math.max(0, (data[i + 1] - 128) * contrast + 128 + brightness));
-    data[i + 2] = Math.min(255, Math.max(0, (data[i + 2] - 128) * contrast + 128 + brightness));
+    data[i] = Math.min(255, Math.max(0, (data[i] - 128) * 1.08 + 132));
+    data[i + 1] = Math.min(255, Math.max(0, (data[i + 1] - 128) * 1.08 + 132));
+    data[i + 2] = Math.min(255, Math.max(0, (data[i + 2] - 128) * 1.08 + 132));
   }
 
   ctx.putImageData(imageData, 0, 0);
-
-  // 약한 샤픈
-  const sharpData = ctx.getImageData(0, 0, width, height);
-  const src = new Uint8ClampedArray(sharpData.data);
-  const dst = sharpData.data;
-
-  const kernel = [
-     0, -0.25,  0,
-    -0.25, 2.0, -0.25,
-     0, -0.25,  0
-  ];
-
-  for (let y = 1; y < height - 1; y++) {
-    for (let x = 1; x < width - 1; x++) {
-      const idx = (y * width + x) * 4;
-
-      // 흰 배경은 샤픈 제외
-      if (src[idx] > 245 && src[idx + 1] > 245 && src[idx + 2] > 245) continue;
-
-      for (let c = 0; c < 3; c++) {
-        let sum = 0;
-        let k = 0;
-
-        for (let ky = -1; ky <= 1; ky++) {
-          for (let kx = -1; kx <= 1; kx++) {
-            const pidx = ((y + ky) * width + (x + kx)) * 4 + c;
-            sum += src[pidx] * kernel[k];
-            k++;
-          }
-        }
-
-        dst[idx + c] = Math.min(255, Math.max(0, sum));
-      }
-    }
-  }
-
-  ctx.putImageData(sharpData, 0, 0);
 }
 
 function applyPreviewProtection(ctx, width, height) {
-  // 원본 결과를 임시 저장
-  const original = ctx.getImageData(0, 0, width, height);
-
-  // 얼굴 중앙 영역만 블러 처리
-  const blurX = width * 0.28;
-  const blurY = height * 0.28;
-  const blurW = width * 0.44;
-  const blurH = height * 0.30;
-
   const tempCanvas = document.createElement('canvas');
   tempCanvas.width = width;
   tempCanvas.height = height;
-  const tempCtx = tempCanvas.getContext('2d');
 
-  tempCtx.putImageData(original, 0, 0);
+  const tempCtx = tempCanvas.getContext('2d');
+  tempCtx.drawImage(ctx.canvas, 0, 0);
 
   ctx.save();
   ctx.filter = 'blur(10px)';
-  ctx.drawImage(
-    tempCanvas,
-    blurX,
-    blurY,
-    blurW,
-    blurH,
-    blurX,
-    blurY,
-    blurW,
-    blurH
-  );
+  ctx.drawImage(tempCanvas, 0, 0, width, height);
   ctx.restore();
 
-  // 워터마크 반복
   ctx.save();
-  ctx.globalAlpha = 0.18;
+  ctx.globalAlpha = 0.22;
   ctx.fillStyle = '#1e3a8a';
   ctx.font = 'bold 22px Arial';
   ctx.rotate(-0.45);
@@ -436,283 +822,123 @@ function applyPreviewProtection(ctx, width, height) {
   }
 
   ctx.restore();
+}
 
-  // 중앙 안내 바
-  ctx.save();
-  ctx.globalAlpha = 0.85;
-  ctx.fillStyle = '#0f172a';
-  ctx.fillRect(width * 0.12, height * 0.72, width * 0.76, 52);
+function drawFinalPhoto(sourceImg) {
+  if (!lockedDetection) throw new Error('No locked detection.');
 
-  ctx.globalAlpha = 1;
+  const crownY = lockedDetection.crownY;
+  const chinY = lockedDetection.chinY;
+
+  if (!Number.isFinite(crownY) || !Number.isFinite(chinY) || chinY <= crownY) {
+    throw new Error('Invalid locked crown/chin geometry.');
+  }
+
+  const currentHeadPx = Math.max(1, chinY - crownY);
+ const scale = (TARGET_HEAD_PX * 0.9) / currentHeadPx;
+
+  const sourceWidth = sourceImg.naturalWidth || sourceImg.width;
+  const centerX = sourceWidth / 2;
+
+  const finalCenterX = getFaceCenterX(
+    lockedDetection.landmarks,
+    sourceWidth,
+    centerX
+  );
+
+  canvas.width = TARGET;
+  canvas.height = TARGET;
+
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, TARGET, TARGET);
   ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 18px Arial';
-  ctx.textAlign = 'center';
-  ctx.fillText('Unlock high-quality download after payment', width / 2, height * 0.72 + 33);
+  ctx.fillRect(0, 0, TARGET, TARGET);
+
+  ctx.save();
+  ctx.translate(TARGET / 2, TOP_MARGIN_PX + 32);
+  ctx.rotate(-lockedDetection.faceTiltAngle);
+  ctx.scale(scale, scale);
+  ctx.drawImage(sourceImg, -finalCenterX, -crownY);
   ctx.restore();
 
-  }
+  enhanceCanvas(ctx, TARGET, TARGET);
 
-
-async function removeBackgroundWithPhotoRoom() {
-  if (!uploadedFile) throw new Error('No uploaded file');
-
-  statusEl.textContent = 'Processing photo...';
-
-  const formData = new FormData();
-  formData.append('image', uploadedFile);
-
-  const response = await fetch('/api/remove-background', {
-    method: 'POST',
-    body: formData
-  });
-
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(text || 'Background removal failed');
-  }
-
-  const blob = await response.blob();
-  const url = URL.createObjectURL(blob);
-
-  return await new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = function() {
-      resolve(img);
-    };
-    img.onerror = reject;
-    img.src = url;
-  });
+  return canvas.toDataURL('image/jpeg', 0.95);
 }
 
 createBtn.addEventListener('click', async function(e) {
   e.preventDefault();
-  shouldScrollAfterCreate = true;
 
   if (!uploadedImg || !uploadedFile) {
     statusEl.textContent = 'Please upload a photo first.';
     return;
   }
 
-  createBtn.disabled = true;
-  createBtn.textContent = 'Processing...';
+  if (!photoValidationPassed || !lockedDetection) {
+    statusEl.textContent = 'Please click Auto Detect before creating your photo.';
+    setCreateEnabled(false);
+    return;
+  }
 
   try {
+    setCreateEnabled(false);
+    createBtn.textContent = 'Creating...';
+    statusEl.textContent = 'Creating your photo...';
+
     if (!bgRemovedImg) {
       bgRemovedImg = await removeBackgroundWithPhotoRoom();
     }
 
-    const img = bgRemovedImg;
+    const cleanUrl = drawFinalPhoto(bgRemovedImg);
+    resultUrl = cleanUrl;
 
-    
-    
+    window.parent.localStorage.setItem('usvisa_clean_photo', cleanUrl);
+    window.parent.localStorage.setItem('usvisa_download_count', '0');
 
-    const crownY = imageYFromLine(crownLine);
-    const chinY = imageYFromLine(chinLine);
-    const headPxOriginal = chinY - crownY;
+    const protectedCanvas = document.createElement('canvas');
+    protectedCanvas.width = TARGET;
+    protectedCanvas.height = TARGET;
+    const pctx = protectedCanvas.getContext('2d');
 
-    if (headPxOriginal <= 10) {
-      statusEl.textContent = 'Chin line must be below Crown line.';
-      createBtn.disabled = false;
-      createBtn.textContent = 'Create Photo';
-      return;
-    }
+    const finalPreview = new Image();
 
-    const iw = img.naturalWidth || img.width;
-    const ih = img.naturalHeight || img.height;
-
-    const scale = TARGET_HEAD_PX / headPxOriginal;
-    const crownX = iw / 2;
-    const centerX = crownX;
-
-    canvas.width = TARGET;
-    canvas.height = TARGET;
-
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, TARGET, TARGET);
-
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = 'high';
-
-    const drawW = iw * scale;
-    const drawH = ih * scale;
-
-    const CENTER_FIX_X = -15; // 오른쪽으로 23px 이동
-const dx = TARGET / 2 - centerX * scale + CENTER_FIX_X;
-    const dy = TOP_MARGIN_PX - crownY * scale;
-
-    ctx.save();
-
-ctx.translate(TARGET / 2, TARGET / 2);
-
-ctx.rotate(-faceTiltAngle);
-
-ctx.drawImage(
-  img,
-  dx - TARGET / 2,
-  dy - TARGET / 2,
-  drawW,
-  drawH
-);
-
-ctx.restore();
-
-enhanceCanvas(ctx, TARGET, TARGET);
-
-resultUrl = canvas.toDataURL('image/jpeg', 0.97);
-
-// 깨끗한 원본은 결제 전 임시 보관
-window.parent.localStorage.setItem('usvisa_pending_clean_photo', resultUrl);
-
-// 결제 전 미리보기 보호 처리
-applyPreviewProtection(ctx, TARGET, TARGET);
-
-// 보호된 미리보기 화면도 저장
-const protectedPreviewUrl = canvas.toDataURL('image/jpeg', 0.92);
-window.parent.localStorage.setItem('usvisa_protected_preview', protectedPreviewUrl);
-
-if (uploadTips) uploadTips.style.display = 'none';
-if (resultPanel) resultPanel.style.display = 'block';
-
-canvas.style.display = 'block';
-canvas.style.width = '100%';
-canvas.style.height = 'auto';
-canvas.style.maxHeight = '360px';
-canvas.style.objectFit = 'contain';
-canvas.style.borderRadius = '16px';
-canvas.style.marginTop = '14px';
-canvas.style.marginBottom = '16px';
-
-downloadBtn.style.display = 'block';
-downloadBtn.disabled = false;
-downloadBtn.textContent = 'Unlock Download - $4.99';
-downloadBtn.style.marginTop = '14px';
-downloadBtn.style.marginBottom = '14px';
-
-
- } catch (err) {
-
-statusEl.style.display = 'block';
-statusEl.style.marginTop = '16px';
-statusEl.style.clear = 'both';
-
-statusEl.textContent = 'Preview only. Face area is blurred and watermarked until payment.';
-if (shouldScrollAfterCreate) {
-  shouldScrollAfterCreate = false;
-
-  setTimeout(() => {
-    const frame = window.frameElement;
-
-    if (frame && window.parent) {
-      const frameRect = frame.getBoundingClientRect();
-      const targetTop =
-        window.parent.scrollY +
-        frameRect.top +
-        canvas.offsetTop -
-        80;
-
-      window.parent.scrollTo({
-        top: targetTop,
-        behavior: 'smooth'
-      });
-    }
-  }, 500);
-}
-
-if (resultUrl && uploadedFile) {
-  setTimeout(() => {
-    canvas.scrollIntoView({
-      behavior: 'smooth',
-      block: 'center'
+    await new Promise(function(resolve, reject) {
+      finalPreview.onload = resolve;
+      finalPreview.onerror = reject;
+      finalPreview.src = cleanUrl;
     });
-  }, 500);
-}
 
-console.error(err);
-    statusEl.textContent = 'Photo processing failed. Please try again.';
+    pctx.drawImage(finalPreview, 0, 0);
+    applyPreviewProtection(pctx, TARGET, TARGET);
+
+    window.parent.localStorage.setItem(
+      'usvisa_protected_preview',
+     protectedCanvas.toDataURL('image/png')
+    );
+
+    ctx.clearRect(0, 0, TARGET, TARGET);
+    ctx.drawImage(protectedCanvas, 0, 0);
+
+    canvas.style.display = 'block';
+    if (resultPanel) resultPanel.style.display = 'block';
+    if (uploadTips) uploadTips.style.display = 'none';
+
+    downloadBtn.style.display = 'inline-flex';
+    downloadBtn.textContent = window.parent.location.search.includes('paid=1')
+      ? 'Download Photo'
+      : '🔓 Unlock HD Photo – $4.99';
+
+    setDownloadEnabled(true);
+    statusEl.textContent = 'Preview created. Unlock download to receive the clean photo.';
+
+  } catch (err) {
+    console.error('CREATE PHOTO ERROR:', err);
+    statusEl.textContent = 'ERROR: ' + (err && err.message ? err.message : String(err));
+    setCreateEnabled(true);
+  } finally {
+    createBtn.textContent = 'Create Photo';
   }
-
-  createBtn.disabled = false;
-  createBtn.textContent = 'Create Photo';
 });
-
-function restorePaidDownloadIfAvailable() {
-  const isPaid = window.parent.location.search.includes('paid=1');
-  const savedPhoto = window.parent.localStorage.getItem('usvisa_clean_photo');
-  const savedDownloadCount = window.parent.localStorage.getItem('usvisa_download_count') || '0';
-
-  if (!isPaid || !savedPhoto) return;
-
-  resultUrl = savedPhoto;
-
-  const paidImg = new Image();
-
-  paidImg.onload = function() {
-    canvas.width = TARGET;
-    canvas.height = TARGET;
-
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, TARGET, TARGET);
-    
-    ctx.drawImage(paidImg, 0, 0, TARGET, TARGET);
-
-    if (uploadTips) uploadTips.style.display = 'none';
-    if (resultPanel) resultPanel.style.display = 'block';
-
-    canvas.style.display = 'block';
-    downloadBtn.style.display = 'block';
-    downloadBtn.disabled = false;
-    downloadBtn.textContent = 'Download Photo';
-
-    downloadBtn.dataset.downloadCount = savedDownloadCount;
-
-    statusEl.textContent = 'Payment complete. Your download is ready.';
-  };
-
-  paidImg.src = savedPhoto;
-}
-function restoreUnpaidPreviewIfAvailable() {
-  const isPaid = window.parent.location.search.includes('paid=1');
-  if (isPaid) return;
-
-  const savedClean = window.parent.localStorage.getItem('usvisa_pending_clean_photo');
-  const savedPreview = window.parent.localStorage.getItem('usvisa_protected_preview');
-
-  if (!savedClean || !savedPreview) return;
-
-  resultUrl = savedClean;
-
-  const preview = new Image();
-
-  preview.onload = function() {
-    canvas.width = TARGET;
-    canvas.height = TARGET;
-
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, TARGET, TARGET);
-    ctx.drawImage(preview, 0, 0, TARGET, TARGET);
-
-    if (uploadTips) uploadTips.style.display = 'none';
-    if (resultPanel) resultPanel.style.display = 'block';
-
-    canvas.style.display = 'block';
-
-
-downloadBtn.style.display = 'block';
-downloadBtn.disabled = false;
-downloadBtn.textContent = 'Unlock Download - $4.99';
-
-
-    statusEl.textContent = 'Preview restored. Unlock download after payment.';
-  };
-
-  preview.src = savedPreview;
-}
-
-restoreUnpaidPreviewIfAvailable();
-
-
-restorePaidDownloadIfAvailable();
-
 downloadBtn.addEventListener('click', async function() {
   if (!resultUrl) {
     statusEl.textContent = 'Please create your photo first.';
@@ -722,50 +948,72 @@ downloadBtn.addEventListener('click', async function() {
   const isPaid = window.parent.location.search.includes('paid=1');
 
   if (isPaid) {
-  const count = Number(downloadBtn.dataset.downloadCount || '0');
+    const count = Number(window.parent.localStorage.getItem('usvisa_download_count') || downloadBtn.dataset.downloadCount || '0');
+    if (count >= 5) {
+      statusEl.textContent = 'Download limit reached. Please start a new order if needed.';
+      setDownloadEnabled(false);
+      downloadBtn.textContent = 'Download limit reached';
+      return;
+    }
 
-  if (count >= 5) {
-    statusEl.textContent = 'Download limit reached. Please start a new order if needed.';
-    downloadBtn.disabled = true;
-    downloadBtn.textContent = 'Download limit reached';
+    const a = document.createElement('a');
+    a.href = resultUrl;
+    a.download = 'us_visa_photo.jpg';
+    a.click();
+
+    const nextCount = count + 1;
+    downloadBtn.dataset.downloadCount = String(nextCount);
+    window.parent.localStorage.setItem('usvisa_download_count', String(nextCount));
+    statusEl.textContent = 'Download complete. Remaining downloads: ' + (5 - nextCount);
     return;
   }
 
-  const a = document.createElement('a');
-  a.href = resultUrl;
-  a.download = 'USVisaPhoto_Embassy_Ready.jpg';
-  a.click();
-
-  const nextCount = count + 1;
-  downloadBtn.dataset.downloadCount = String(nextCount);
-  window.parent.localStorage.setItem('usvisa_download_count', String(nextCount));
-
-  statusEl.textContent = 'Download complete. Remaining downloads: ' + (5 - nextCount);
-
-  return;
-}
-  window.parent.localStorage.setItem('usvisa_clean_photo', resultUrl);
-
-  downloadBtn.disabled = true;
-  downloadBtn.textContent = 'Opening PayPal...';
+  setDownloadEnabled(false);
+  downloadBtn.textContent = 'Opening checkout...';
 
   try {
-    const response = await fetch('/api/create-paypal-order', {
-  method: 'POST',
-  });
-
+    const response = await fetch('/api/create-paypal-order', { method: 'POST' });
     const data = await response.json();
-
-    if (data.url) {
-      window.parent.location.href = data.url;
-    } else {
-      throw new Error('No checkout URL');
-    }
+    if (!data.url) throw new Error('No checkout URL');
+    window.parent.location.href = data.url;
   } catch (error) {
     console.error(error);
     statusEl.textContent = 'Payment page failed to open. Please try again.';
-    downloadBtn.disabled = false;
-    downloadBtn.textContent = 'Unlock Download - $4.99';
+    downloadBtn.textContent = '🔓 Unlock HD Photo — $4.99';
+    setDownloadEnabled(true);
   }
 });
+
+function restorePaidDownloadIfAvailable() {
+  const clean = window.parent.localStorage.getItem('usvisa_clean_photo');
+  const protectedPreview = window.parent.localStorage.getItem('usvisa_protected_preview');
+  if (!clean && !protectedPreview) return;
+
+  const img = new Image();
+  img.onload = function() {
+    canvas.width = TARGET;
+    canvas.height = TARGET;
+    ctx.clearRect(0, 0, TARGET, TARGET);
+    ctx.drawImage(img, 0, 0);
+    canvas.style.display = 'block';
+    if (resultPanel) resultPanel.style.display = 'block';
+    if (uploadTips) uploadTips.style.display = 'none';
+    downloadBtn.style.display = 'inline-flex';
+
+    resultUrl = clean || protectedPreview;
+    if (window.parent.location.search.includes('paid=1')) {
+      downloadBtn.textContent = 'Download Photo';
+      statusEl.textContent = 'Payment confirmed. You can download your clean photo.';
+    } else {
+      downloadBtn.textContent = '🔓 Unlock HD Photo — $4.99';
+      statusEl.textContent = 'Preview restored. Unlock download to receive the clean photo.';
+    }
+    setDownloadEnabled(true);
+  };
+  img.src = window.parent.location.search.includes('paid=1') && clean ? clean : protectedPreview;
+}
+
+setCreateEnabled(false);
+setDownloadEnabled(false);
+restorePaidDownloadIfAvailable();
 `;

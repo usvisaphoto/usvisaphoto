@@ -53,6 +53,18 @@ function runPhotoValidation(landmarks, iw, ih) {
     return true;
   }
 
+ const chinBottomSpaceRatio = 1 - landmarks[152].y;
+
+if (chinBottomSpaceRatio < 0.22) {
+  validationCard.className = 'validation-card validation-error';
+  checkFace.textContent = '❌ Photo validation failed';
+  checkPosition.textContent = '❌ Both shoulders visible';
+  validationFinal.innerHTML =
+    '❌ Both shoulders must be visible.<br>' +
+    'Please retake your photo from farther away.';
+ if (createBtn) createBtn.disabled = true;
+    return false;
+}
   validationFinal.textContent = '✅ Ready to Create Photo';
   if (createBtn) createBtn.disabled = false;
   return true;

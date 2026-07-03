@@ -22,9 +22,7 @@ export const uploadBoxMarkup = String.raw`
   </button>
 
   <div class="guide-note" id="guideNote">
-    Auto detection is applied automatically.<br>
-    If the crown or chin line looks inaccurate,
-    drag the guide lines before creating your photo.
+   Your photo has been automatically checked and is ready to create.
   </div>
 
 
@@ -87,15 +85,31 @@ Please verify the Crown and Chin guide lines before creating your photo.
   <div id="resultPanel" class="result-panel">
     <div class="result-title">Preview Result</div>
     <div class="result-subtitle">
-      Face area is blurred and watermarked until payment.
-    </div>
+  Your photo has passed validation. Unlock the clean 600×600 embassy-ready photo.
+</div>
 
     <div class="result-canvas-wrap">
-      <canvas id="result-canvas" width="600" height="600"></canvas>
+
+    <div class="result-badge">
+        <div class="badge-title">
+            🇺🇸 Embassy-Ready
+        </div>
+
+        <div class="badge-subtitle">
+            2×2 inch · 300 DPI
+        </div>
     </div>
 
+    <canvas
+        id="result-canvas"
+        width="600"
+        height="600">
+    </canvas>
+
+</div>
+
     <button id="download-btn" type="button">
-      Unlock Download - $4.99
+      🔓 Unlock HD Photo — $4.99
     </button>
 
     <div class="result-help">
