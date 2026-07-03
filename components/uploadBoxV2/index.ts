@@ -5,6 +5,7 @@ import { uploadBoxStyles } from "./styles";
 import { uploadBoxMarkup } from "./markup";
 import { uploadBoxLogic } from "./logic";
 import { faceDirectionLogic } from "./faceDirection";
+import { mouthValidationLogic } from "./mouthValidation";
 export const uploadBoxHtmlV2 = String.raw`
 <!DOCTYPE html>
 <html>
@@ -22,6 +23,7 @@ ${uploadBoxGeometry}
 ${uploadBoxValidation}
 ${faceDirectionLogic}
 ${eyeValidationLogic}
+${mouthValidationLogic}
 ${uploadBoxLogic}
 </script>
 </body>

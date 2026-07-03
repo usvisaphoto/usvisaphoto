@@ -480,10 +480,10 @@ function validateDetectedPhoto(lm, iw, ih) {
     return false;
   }
 
-  const mouthOpen = Math.abs(lm[13].y - lm[14].y);
-  const faceHeightCheck = Math.abs(lm[152].y - lm[10].y);
-  const mouthRatio = mouthOpen / faceHeightCheck;
-  const mouthOpenDetected = mouthRatio > 0.055;
+  const mouthResult = detectMouth(lm);
+
+const mouthRatio = mouthResult.mouthRatio;
+const mouthOpenDetected = mouthResult.mouthOpened;
 
   if (checkMouth) {
     checkMouth.textContent = mouthOpenDetected ? '🔴 Mouth should be closed' : '🟢 Mouth closed';
