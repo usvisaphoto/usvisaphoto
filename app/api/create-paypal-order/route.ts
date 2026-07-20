@@ -32,7 +32,14 @@ async function getAccessToken() {
     }
   );
 
-  const data = await res.json();
+ let data;
+
+try {
+  data = await res.json();
+} catch (error) {
+  console.error("INVALID PAYPAL ACCESS TOKEN RESPONSE:", error);
+  throw new Error("Invalid response from PayPal.");
+}
 
   if (!res.ok || !data.access_token) {
     console.error(
@@ -51,8 +58,9 @@ async function getAccessToken() {
 export async function POST(req: Request) {
   try {
     const origin =
-      req.headers.get("origin") ||
-      "http://localhost:3000";
+  req.headers.get("origin") ||
+  process.env.NEXT_PUBLIC_SITE_URL ||
+  "https://usvisaphoto.app";
 
     let product: ProductType = "basic";
 
@@ -143,7 +151,22 @@ export async function POST(req: Request) {
       }
     );
 
-    const data = await res.json();
+    let data;
+
+try {
+  data = await res.json();
+} catch (error) {
+  console.error("INVALID PAYPAL CREATE ORDER RESPONSE:", error);
+
+  return NextResponse.json(
+    {
+      error: "Invalid response from PayPal.",
+    },
+    {
+      status: 502,
+    }
+  );
+}
 
     if (!res.ok) {
       console.error(
