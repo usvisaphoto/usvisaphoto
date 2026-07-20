@@ -25,11 +25,8 @@ ${uploadBoxGeometry}
 ${uploadBoxValidation}
 ${faceDirectionLogic}
 ${eyeValidationLogic}
-<<<<<<< HEAD
 ${mouthValidationLogic}
-=======
 ${poseValidationLogic}
->>>>>>> 617e364 (Blob upload test)
 ${uploadBoxLogic}
 </script>
 </body>
