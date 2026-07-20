@@ -9,14 +9,23 @@ function detectEyes(lm) {
   const leftEyeRatio = eyeOpenRatio(159, 145, 33, 133);
   const rightEyeRatio = eyeOpenRatio(386, 374, 362, 263);
 
-  const eyesClosed =
-    leftEyeRatio < 0.16 ||
-    rightEyeRatio < 0.16;
+  const EYE_CLOSED_RATIO = 0.095;
 
-  return {
-    leftEyeRatio: leftEyeRatio,
-    rightEyeRatio: rightEyeRatio,
-    eyesClosed: eyesClosed
-  };
+const eyesClosed =
+  leftEyeRatio < EYE_CLOSED_RATIO &&
+  rightEyeRatio < EYE_CLOSED_RATIO;
+
+console.log(
+  "Eye Ratio",
+  "L:", leftEyeRatio.toFixed(3),
+  "R:", rightEyeRatio.toFixed(3),
+  "Closed:", eyesClosed
+);
+
+return {
+    leftEyeRatio,
+    rightEyeRatio,
+    eyesClosed
+};
 }
 `;

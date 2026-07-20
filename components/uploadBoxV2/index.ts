@@ -1,3 +1,4 @@
+import { poseValidationLogic } from "./poseValidation";
 import { eyeValidationLogic } from "./eyeValidation";
 import { uploadBoxGeometry } from "./geometry";
 import { uploadBoxValidation } from "./validation";
@@ -18,12 +19,17 @@ ${uploadBoxStyles}
 <body>
 ${uploadBoxMarkup}
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js"></script>
 <script>
 ${uploadBoxGeometry}
 ${uploadBoxValidation}
 ${faceDirectionLogic}
 ${eyeValidationLogic}
+<<<<<<< HEAD
 ${mouthValidationLogic}
+=======
+${poseValidationLogic}
+>>>>>>> 617e364 (Blob upload test)
 ${uploadBoxLogic}
 </script>
 </body>
