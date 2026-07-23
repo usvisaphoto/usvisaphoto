@@ -61,9 +61,12 @@ export async function POST(req: Request) {
     return NextResponse.json({
       image_base64: result.toString("base64"),
     });
-  } catch (e: any) {
+  } catch (e: unknown) {
+    const message =
+      e instanceof Error ? e.message : "Upscale failed.";
+
     return NextResponse.json(
-      { error: e.message },
+      { error: message },
       { status: 500 }
     );
   }

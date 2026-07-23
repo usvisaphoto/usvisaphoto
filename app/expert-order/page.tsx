@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import {
   ChangeEvent,
   FormEvent,
@@ -21,8 +22,22 @@ const ALLOWED_FILE_TYPES = [
 
 export default function ExpertOrderPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const previewObjectUrlRef = useRef("");
 
-  const [paypalOrderId, setPaypalOrderId] = useState("");
+  const [paypalOrderId] = useState(() => {
+    if (typeof window === "undefined") {
+      return "";
+    }
+
+    const params = new URLSearchParams(window.location.search);
+
+    return (
+      params.get("orderId") ||
+      params.get("paypalOrderId") ||
+      params.get("paypal_order_id") ||
+      ""
+    );
+  });
   const [deliveryMethod, setDeliveryMethod] =
     useState<DeliveryMethod>("email");
 
@@ -40,30 +55,12 @@ export default function ExpertOrderPage() {
   const [successMessage, setSuccessMessage] = useState("");
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-
-    const orderId =
-      params.get("orderId") ||
-      params.get("paypalOrderId") ||
-      params.get("paypal_order_id") ||
-      "";
-
-    setPaypalOrderId(orderId);
-  }, []);
-
-  useEffect(() => {
-    if (!photoFile) {
-      setPreviewUrl("");
-      return;
-    }
-
-    const objectUrl = URL.createObjectURL(photoFile);
-    setPreviewUrl(objectUrl);
-
     return () => {
-      URL.revokeObjectURL(objectUrl);
+      if (previewObjectUrlRef.current) {
+        URL.revokeObjectURL(previewObjectUrlRef.current);
+      }
     };
-  }, [photoFile]);
+  }, []);
 
   const contactValue = useMemo(() => {
     return deliveryMethod === "email" ? email.trim() : whatsapp.trim();
@@ -77,11 +74,13 @@ export default function ExpertOrderPage() {
 
     if (!selectedFile) {
       setPhotoFile(null);
+      setPreviewUrl("");
       return;
     }
 
     if (!ALLOWED_FILE_TYPES.includes(selectedFile.type.toLowerCase())) {
       setPhotoFile(null);
+      setPreviewUrl("");
       event.target.value = "";
       setErrorMessage(
         "Please upload a JPG, JPEG, PNG, or WEBP image."
@@ -91,16 +90,31 @@ export default function ExpertOrderPage() {
 
     if (selectedFile.size > MAX_FILE_SIZE) {
       setPhotoFile(null);
+      setPreviewUrl("");
       event.target.value = "";
       setErrorMessage("The image must be 15 MB or smaller.");
       return;
     }
 
+    if (previewObjectUrlRef.current) {
+      URL.revokeObjectURL(previewObjectUrlRef.current);
+    }
+
+    const objectUrl = URL.createObjectURL(selectedFile);
+    previewObjectUrlRef.current = objectUrl;
+
     setPhotoFile(selectedFile);
+    setPreviewUrl(objectUrl);
   }
 
   function removePhoto() {
+    if (previewObjectUrlRef.current) {
+      URL.revokeObjectURL(previewObjectUrlRef.current);
+      previewObjectUrlRef.current = "";
+    }
+
     setPhotoFile(null);
+    setPreviewUrl("");
 
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
@@ -216,13 +230,13 @@ export default function ExpertOrderPage() {
 
       <section style={styles.container}>
         <header style={styles.header}>
-          <a href="/" style={styles.brandLink}>
+          <Link href="/" style={styles.brandLink}>
             <span style={styles.logoMark}>US</span>
 
             <span style={styles.brandName}>
               USVisa<span style={styles.brandAccent}>Photo</span>
             </span>
-          </a>
+          </Link>
 
           <div style={styles.secureBadge}>
             <span aria-hidden="true">🔒</span>

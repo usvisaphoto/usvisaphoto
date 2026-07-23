@@ -15,13 +15,6 @@ const US_HEIGHT = 600;
 const INTERNATIONAL_WIDTH = 413;
 const INTERNATIONAL_HEIGHT = 531;
 
-/*
- * 기존 미국 비자 사진의 얼굴 길이: 2.8cm
- * 국제 규격 목표 얼굴 길이: 3.2cm
- */
-const US_FACE_HEIGHT_CM = 2.8;
-const INTERNATIONAL_FACE_HEIGHT_CM = 3.28;
-
 type PhotoFormat = 'us' | 'international';
 
 function getPhotoFormat(value: FormDataEntryValue | null): PhotoFormat {
@@ -36,7 +29,12 @@ export async function POST(req: NextRequest) {
 
     const image = formData.get('image');
     const format = getPhotoFormat(formData.get('format'));
-
+    const foreheadY = Number(formData.get('foreheadY'));
+    const chinY = Number(formData.get('chinY'));
+    const faceHeight = Number(formData.get('faceHeight'));
+    const imageWidth = Number(formData.get('imageWidth'));
+    const imageHeight = Number(formData.get('imageHeight'));
+    
     if (!(image instanceof File)) {
       return NextResponse.json(
         {
@@ -53,70 +51,56 @@ export async function POST(req: NextRequest) {
     );
 
     if (format === 'international') {
-      /*
-       * 2.8cm 얼굴을 3.2cm 얼굴로 확대하는 비율
-       * 약 1.142857
-       */
-      const scale =
-        INTERNATIONAL_FACE_HEIGHT_CM /
-        US_FACE_HEIGHT_CM;
+  /*
+   * 이미 완성된 600×600 US 사진을
+   * 3.5×4.5 비율로 자연스럽게 변환합니다.
+   *
+   * 사진 높이를 531px에 맞춘 뒤
+   * 좌우만 중앙 기준으로 최소 크롭합니다.
+   *
+   * 얼굴을 별도로 확대하지 않으므로
+   * 얼굴·어깨 비율이 과도하게 커지지 않습니다.
+   */
+  const resizedWidth = 610;
+  const resizedHeight = 610;
 
-      const resizedSize = Math.round(
-        US_WIDTH * scale
-      );
+  const left = Math.floor(
+    (resizedWidth - INTERNATIONAL_WIDTH) / 2
+  );
 
-      /*
-       * 상단 여백은 그대로 유지하고,
-       * 좌우만 중앙 기준으로 잘라냅니다.
-       */
-      const left = Math.max(
-        0,
-        Math.floor(
-          (resizedSize - INTERNATIONAL_WIDTH) / 2
-        )
-      );
+  const output = await sharp(buffer)
+    .resize(resizedWidth, resizedHeight, {
+      fit: 'fill',
+    })
+    .extract({
+      left,
+      top: 28,
+      width: INTERNATIONAL_WIDTH,
+      height: INTERNATIONAL_HEIGHT,
+    })
+    .jpeg({
+      quality: 98,
+      chromaSubsampling: '4:4:4',
+      mozjpeg: true,
+    })
+    .withMetadata({
+      density: 300,
+    })
+    .toBuffer();
 
-     /*
- * 원본 US 사진의 머리 위 여백은 약 0.55cm.
- * 3.2cm 얼굴 크기로 확대된 뒤 위쪽을 약 27px만 잘라
- * 국제사진의 머리 위 여백을 약 0.4cm로 맞춘다.
- */
-const top = 38;
-
-const output = await sharp(buffer)
-  .resize(resizedSize, resizedSize, {
-    fit: 'fill',
-  })
-  .extract({
-    left,
-    top,
-    width: INTERNATIONAL_WIDTH,
-    height: INTERNATIONAL_HEIGHT,
-  })
-  .jpeg({
-    quality: 98,
-    chromaSubsampling: '4:4:4',
-    mozjpeg: true,
-  })
-  .withMetadata({
-    density: 300,
-  })
-  .toBuffer();
-
-      return new NextResponse(
-        new Uint8Array(output),
-        {
-          status: 200,
-          headers: {
-            'Content-Type': 'image/jpeg',
-            'Content-Disposition':
-              'attachment; filename="international_visa_photo_35x45mm.jpg"',
-            'Cache-Control': 'no-store',
-          },
-        }
-      );
+  return new NextResponse(
+    new Uint8Array(output),
+    {
+      status: 200,
+      headers: {
+        'Content-Type': 'image/jpeg',
+        'Content-Disposition':
+          'attachment; filename="international_visa_photo_35x45mm.jpg"',
+        'Cache-Control': 'no-store',
+      },
     }
-
+  );
+}
     /*
      * 기본 미국 비자/여권 사진
      * 2 × 2 inch, 600 × 600px, 300 DPI

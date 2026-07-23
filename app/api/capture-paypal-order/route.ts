@@ -22,6 +22,12 @@ const VALID_PRODUCTS = new Set<ProductType>([
   "expert-international",
 ]);
 
+type PayPalCaptureData = {
+  purchase_units?: Array<{
+    custom_id?: string | null;
+  }>;
+};
+
 async function readJsonSafe(res: Response) {
   try {
     return await res.json();
@@ -65,7 +71,7 @@ async function getAccessToken() {
 }
 
 function getProduct(
-  paypalData: any,
+  paypalData: PayPalCaptureData | null,
   requestedProduct: string | null
 ): ProductType {
   const capturedProduct =

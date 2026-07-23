@@ -8,6 +8,20 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+type ImageEditResultPayload = {
+  data?: Array<{
+    b64_json?: string;
+    url?: string;
+  }>;
+  output?: Array<{
+    result?: string;
+    image_base64?: string;
+    content?: Array<{
+      image_base64?: string;
+    }>;
+  }>;
+};
+
 export async function POST(req: NextRequest) {
   try {
     if (!process.env.OPENAI_API_KEY) {
@@ -73,14 +87,15 @@ export async function POST(req: NextRequest) {
     console.timeEnd("OPENAI");
     console.log("===== AFTER OPENAI =====");
 
-    const resultAny = response as any;
+    const resultPayload =
+      response as unknown as ImageEditResultPayload;
 
     const imageResult =
-      resultAny?.data?.[0]?.b64_json ??
-      resultAny?.data?.[0]?.url ??
-      resultAny?.output?.[0]?.result ??
-      resultAny?.output?.[0]?.image_base64 ??
-      resultAny?.output?.[0]?.content?.[0]?.image_base64;
+      resultPayload?.data?.[0]?.b64_json ??
+      resultPayload?.data?.[0]?.url ??
+      resultPayload?.output?.[0]?.result ??
+      resultPayload?.output?.[0]?.image_base64 ??
+      resultPayload?.output?.[0]?.content?.[0]?.image_base64;
 
     if (
       typeof imageResult !== "string" ||
@@ -88,7 +103,7 @@ export async function POST(req: NextRequest) {
     ) {
       console.error(
         "Professional retouch returned no image:",
-        resultAny
+        resultPayload
       );
 
       return NextResponse.json(

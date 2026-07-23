@@ -1,10 +1,12 @@
+import Link from "next/link";
+
 export default function WhyUsPage() {
   return (
     <main className="min-h-screen bg-gradient-to-br from-blue-950 via-blue-900 to-slate-950 px-6 py-16 text-white">
       <div className="mx-auto max-w-5xl">
-        <a href="/" className="mb-8 inline-block text-sm font-semibold text-blue-200 hover:underline">
+        <Link href="/" className="mb-8 inline-block text-sm font-semibold text-blue-200 hover:underline">
           ← Back to Home
-        </a>
+        </Link>
 
         <div className="rounded-3xl bg-white p-10 text-slate-800 shadow-2xl">
           <h1 className="text-4xl font-extrabold text-blue-950">

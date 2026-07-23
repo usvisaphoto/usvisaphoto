@@ -5,8 +5,10 @@ import { uploadBoxValidation } from "./validation";
 import { uploadBoxStyles } from "./styles";
 import { uploadBoxMarkup } from "./markup";
 import { uploadBoxLogic } from "./logic";
+import { photoStateScript } from "./photoState";
 import { faceDirectionLogic } from "./faceDirection";
 import { mouthValidationLogic } from "./mouthValidation";
+import { detectedPhotoValidationScript } from "@/src/photo-engine/client-script";
 export const uploadBoxHtmlV2 = String.raw`
 <!DOCTYPE html>
 <html>
@@ -27,6 +29,8 @@ ${faceDirectionLogic}
 ${eyeValidationLogic}
 ${mouthValidationLogic}
 ${poseValidationLogic}
+${detectedPhotoValidationScript}
+${photoStateScript}
 ${uploadBoxLogic}
 </script>
 </body>

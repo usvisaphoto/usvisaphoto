@@ -35,6 +35,12 @@ const validationFinal = document.getElementById('validation-final');
 const professionalCard = document.getElementById('professional-retouch-card');
 const expertCard = document.getElementById('expert-edit-card');  
 const ctx = canvas.getContext('2d');
+const PENDING_PAYMENT_KEY = 'usvisa_pending_payment';
+const ACTIVE_PAYMENT_RETURN_KEY = 'usvisa_active_payment_return';
+const CONFIRMED_PAYMENT_PREFIX = 'usvisa_confirmed_payment:';
+const AUTO_DOWNLOAD_PREFIX = 'usvisa_auto_downloaded:';
+const PENDING_PAYMENT_TTL_MS = 2 * 60 * 60 * 1000;
+const MAX_PAID_DOWNLOADS = 5;
 
 function getSelectedBasicPackage() {
   const selected = document.querySelector(
@@ -72,17 +78,78 @@ if (professionalInternationalOption) {
 }
 
 updateProfessionalPackageButton();
+function setBasicPackageSelection(packageName) {
+  if (
+    packageName !== 'visa-only' &&
+    packageName !== 'visa-plus-international'
+  ) {
+    return;
+  }
+
+  photoTypeInputs.forEach(function (input) {
+    input.checked = input.value === packageName;
+  });
+}
+
+function hideBasicPackageHelpPanels() {
+  if (basicPackageNote) {
+    basicPackageNote.style.display = 'none';
+  }
+
+  if (internationalPackageInfo) {
+    internationalPackageInfo.style.display = 'none';
+  }
+
+  if (internationalPhotoWarning) {
+    internationalPhotoWarning.style.display = 'none';
+  }
+}
+
+function updateBasicPackageHelpPanels(packageName) {
+  if (basicPackageNote) {
+    basicPackageNote.style.display =
+      packageName === 'visa-only'
+        ? 'block'
+        : 'none';
+  }
+
+  if (internationalPackageInfo) {
+    internationalPackageInfo.style.display =
+      packageName === 'visa-plus-international'
+        ? 'block'
+        : 'none';
+  }
+
+  if (internationalPhotoWarning) {
+    internationalPhotoWarning.style.display =
+      packageName === 'visa-plus-international'
+        ? 'block'
+        : 'none';
+  }
+}
+
+function syncBasicPackageUiForPaidProduct(product) {
+  if (product === 'basic') {
+    setBasicPackageSelection('visa-only');
+  }
+
+  if (product === 'basic-international') {
+    setBasicPackageSelection('visa-plus-international');
+  }
+
+  hideBasicPackageHelpPanels();
+}
+
 function updateBasicPackageButton() {
   if (!downloadBtn) return;
 
-  const currentParams = new URLSearchParams(
-  window.parent.location.search
-);
-
-if (currentParams.get('paid') === '1') {
-  downloadBtn.textContent = 'Download Photo';
-  downloadBtn.disabled = false;
-  setDownloadEnabled(true);
+if (hasValidPaidReturn()) {
+  const paidProduct = getCurrentPaidProduct();
+  syncBasicPackageUiForPaidProduct(paidProduct);
+  updatePaidDownloadButton(
+    getPaidDownloadCount(),
+    paidProduct
+  );
   return;
 }
 
@@ -93,61 +160,10 @@ if (currentParams.get('paid') === '1') {
       ? '🔓 Unlock Both Photo Sizes · $7.99'
       : '🔓 Unlock HD Photo · $4.99';
 
-  if (basicPackageNote) {
-    basicPackageNote.style.display =
-      selected === 'visa-only'
-        ? 'block'
-        : 'none';
-  }
-
-  if (internationalPackageInfo) {
-    internationalPackageInfo.style.display =
-      selected === 'visa-plus-international'
-        ? 'block'
-        : 'none';
-  }
-
-  if (internationalPhotoWarning) {
-    internationalPhotoWarning.style.display =
-      selected === 'visa-plus-international'
-        ? 'block'
-        : 'none';
-  }
+  updateBasicPackageHelpPanels(selected);
 }
 
 updateProfessionalPackageButton();
-
-
-
-  const selected = getSelectedBasicPackage();
-
-  downloadBtn.textContent =
-    selected === 'visa-plus-international'
-      ? '🔓 Unlock Both Photo Sizes · $7.99'
-      : '🔓 Unlock HD Photo · $4.99';
-
-      if (basicPackageNote) {
-  basicPackageNote.style.display =
-    selected === 'visa-only'
-      ? 'block'
-      : 'none';
-}
-
-if (internationalPackageInfo) {
-  internationalPackageInfo.style.display =
-    selected === 'visa-plus-international'
-      ? 'block'
-      : 'none';
-}
-
-if (internationalPhotoWarning) {
-  internationalPhotoWarning.style.display =
-    selected === 'visa-plus-international'
-      ? 'block'
-      : 'none';
-}
-
-
 
 photoTypeInputs.forEach(function (input) {
   input.addEventListener('change', updateBasicPackageButton);
@@ -195,6 +211,8 @@ let autoDetectLocked = false;
 let faceMesh = null;
 let selectedPhotoType = 'visa';
 let professionalPreviewLocked = false;
+let lockedDetectionFingerprint = '';
+let professionalRetouchBusy = false;
 function median(values) {
   if (!values.length) return 0;
 
@@ -312,6 +330,23 @@ function setCreateEnabled(enabled) {
   createBtn.style.cursor = enabled ? 'pointer' : 'not-allowed';
 }
 
+function hasLockedDetectionForCurrentPhoto() {
+  if (!lockedDetection) {
+    return false;
+  }
+
+  if (!currentPhotoFingerprint) {
+    return true;
+  }
+
+  return lockedDetectionFingerprint === currentPhotoFingerprint;
+}
+
+function showCreatePhotoButton() {
+  if (!createBtn) return;
+  createBtn.style.display = '';
+}
+
 function setDownloadEnabled(enabled) {
   if (!downloadBtn) return;
   downloadBtn.disabled = !enabled;
@@ -354,6 +389,16 @@ setCreateEnabled(false);
 setDetectButtonState('deny');
 photoValidationPassed = false;
 autoDetectLocked = false;
+lockedDetection = null;
+detectedLm = null;
+lockedDetectionFingerprint = '';
+
+if (currentPhotoFingerprint) {
+  saveAutoDetectDeny(
+    currentPhotoFingerprint,
+    message
+  );
+}
 
   setTimeout(function () {
     if (validationCard) {
@@ -366,12 +411,14 @@ autoDetectLocked = false;
 }
 
 function showValidationReady() {
- console.trace("showValidationReady");
   if (validationCard) {
     validationCard.style.display = 'block';
     validationCard.className = 'validation-card validation-success';
-  }setCreateEnabled(true);
-setDetectButtonState('success');
+  }
+
+  showCreatePhotoButton();
+  setCreateEnabled(true);
+  setDetectButtonState('success');
 
   const report = window.usvisaLastValidationReport || {
     score: 98,
@@ -405,23 +452,15 @@ setDetectButtonState('success');
 
   autoDetectLocked = true;
 
-setDetectButtonState('success');
+  statusEl.innerHTML =
+    '✅ Auto detection completed.<br>Please review the validation report before creating your photo.';
+}
 
-statusEl.innerHTML =
-  '✅ Auto detection completed.<br>Please review the validation report before creating your photo.';
+function getCurrentImage() {
+  return bgRemovedImg || uploadedImg;
+}
 
-setCreateEnabled(true);
-
-autoDetectLocked = true;
-
-setDetectButtonState('success');
-
-statusEl.innerHTML =
-  '✅ Auto detection completed.<br>Please review the validation report before creating your photo.';
-
-setCreateEnabled(true);
-
- function showValidationRecoverable(message) {
+function showValidationRecoverable(message) {
   if (validationCard) {
     validationCard.style.display = 'block';
     validationCard.className =
@@ -446,11 +485,92 @@ setCreateEnabled(true);
       '</div>';
   }
 }
-  return bgRemovedImg || uploadedImg;
-}
 
-function getCurrentImage() {
-  return bgRemovedImg || uploadedImg;
+function restoreStoredAutoDetectResult() {
+  const storedAutoDetect =
+    getStoredAutoDetectResult(currentPhotoFingerprint);
+
+  if (!storedAutoDetect) {
+    return false;
+  }
+
+  if (
+    storedAutoDetect.status === 'pass' &&
+    storedAutoDetect.detection
+  ) {
+    lockedDetection = storedAutoDetect.detection;
+    lockedDetectionFingerprint = currentPhotoFingerprint || '';
+    faceTiltAngle = lockedDetection.faceTiltAngle || 0;
+    window.usvisaLastValidationReport =
+      storedAutoDetect.report || null;
+
+    photoValidationPassed = true;
+    autoDetectLocked = true;
+    showValidationReady();
+
+    statusEl.innerHTML =
+      '✅ Auto detection restored.<br>You can create the photo or run Auto Detect again after choosing another photo.';
+
+    return true;
+  }
+
+  if (
+    storedAutoDetect.status === 'recoverable' &&
+    storedAutoDetect.detection
+  ) {
+    lockedDetection = storedAutoDetect.detection;
+    lockedDetectionFingerprint = currentPhotoFingerprint || '';
+    faceTiltAngle = lockedDetection.faceTiltAngle || 0;
+    window.usvisaRecoverable = true;
+
+    photoValidationPassed = false;
+    autoDetectLocked = true;
+
+    showValidationRecoverable(
+      storedAutoDetect.message ||
+      'This photo is eligible for Professional Retouch or Expert Manual Editing.'
+    );
+
+    setDetectButtonState('warning');
+    setCreateEnabled(false);
+
+    if (createBtn) {
+      createBtn.style.display = 'none';
+    }
+
+    if (professionalCard) {
+      professionalCard.style.display = 'block';
+    }
+
+    if (professionalRetouchBtn) {
+      professionalRetouchBtn.style.display = 'block';
+      applyProfessionalPreviewDailyState();
+    }
+
+    if (expertCard) {
+      expertCard.style.display = 'block';
+    }
+
+    statusEl.textContent =
+      'Auto detection restored. This photo is eligible for Professional Retouch or Expert Manual Editing.';
+
+    return true;
+  }
+
+  if (storedAutoDetect.status === 'deny') {
+    lockedDetection = null;
+    detectedLm = null;
+    lockedDetectionFingerprint = '';
+    photoValidationPassed = false;
+    window.usvisaRecoverable = false;
+    setCreateEnabled(false);
+    setDetectButtonState('deny');
+    statusEl.textContent =
+      'This photo was previously denied by Auto Detect. Please upload another photo or run Auto Detect again.';
+    return true;
+  }
+
+  return false;
 }
   
 let cachedContainRect = null;
@@ -511,33 +631,971 @@ function initGuideLines() {
   crownLine.style.display = 'none';
   chinLine.style.display = 'none';
 }
-  function clearPaymentState() {
+
+function clearPaymentReturnParams() {
+  try {
+    const parentLocation = window.parent.location;
+    const url = new URL(parentLocation.href);
+    let changed = false;
+
+    [
+      'paid',
+      'payment',
+      'payment_error',
+      'canceled',
+      'orderId',
+      'token',
+      'PayerID',
+      'product'
+    ].forEach(function (key) {
+      if (url.searchParams.has(key)) {
+        url.searchParams.delete(key);
+        changed = true;
+      }
+    });
+
+    if (changed) {
+      window.parent.history.replaceState(
+        {},
+        '',
+        url.pathname + url.search + url.hash
+      );
+    }
+  } catch (error) {
+    console.error('PAYMENT URL CLEANUP ERROR:', error);
+  }
+}
+
+function clearConfirmedPaymentStates() {
+  try {
+    const keysToRemove = [];
+
+    for (let i = 0; i < window.parent.localStorage.length; i += 1) {
+      const key = window.parent.localStorage.key(i);
+
+      if (
+        key &&
+        (
+          key.indexOf(CONFIRMED_PAYMENT_PREFIX) === 0 ||
+          key.indexOf(AUTO_DOWNLOAD_PREFIX) === 0
+        )
+      ) {
+        keysToRemove.push(key);
+      }
+    }
+
+    keysToRemove.forEach(function (key) {
+      window.parent.localStorage.removeItem(key);
+    });
+  } catch (error) {
+    console.error('CONFIRMED PAYMENT CLEANUP ERROR:', error);
+  }
+}
+
+function clearPaymentState() {
   window.parent.localStorage.removeItem('usvisa_clean_photo');
   window.parent.localStorage.removeItem('usvisa_download_count');
   window.parent.localStorage.removeItem('usvisa_pending_clean_photo');
   window.parent.localStorage.removeItem('usvisa_protected_preview');
-  
+  window.parent.localStorage.removeItem('usvisa_pending_international_photo');
+  window.parent.localStorage.removeItem('usvisa_pending_professional_photo');
+  window.parent.localStorage.removeItem('usvisa_pending_professional_international_photo');
+  window.parent.localStorage.removeItem('usvisa_created_photo_files_fingerprint');
+  window.parent.localStorage.removeItem('usvisa_pending_professional_photo_fingerprint');
+  window.parent.localStorage.removeItem('usvisa_created_photo_fingerprint');
+  window.parent.localStorage.removeItem(PENDING_PAYMENT_KEY);
+  window.parent.localStorage.removeItem(ACTIVE_PAYMENT_RETURN_KEY);
+  clearConfirmedPaymentStates();
+  clearPaymentReturnParams();
 }
-function getPhotoState() {
-  try {
-    return JSON.parse(
-      window.parent.localStorage.getItem("usvisa_photo_state") || "{}"
-    );
-  } catch {
-    return {};
+
+function readStoredPhoto(key) {
+  return window.parent.localStorage.getItem(key) || '';
+}
+
+function writeStoredPhoto(key, value) {
+  if (value) {
+    window.parent.localStorage.setItem(key, value);
+  } else {
+    window.parent.localStorage.removeItem(key);
   }
 }
 
-function savePhotoState(state) {
-  window.parent.localStorage.setItem(
-    "usvisa_photo_state",
-    JSON.stringify(state)
+function markCreatedPhotoFilesForCurrentPhoto() {
+  writeStoredPhoto(
+    'usvisa_created_photo_files_fingerprint',
+    currentPhotoFingerprint || ''
   );
 }
 
-function clearPhotoState() {
-  window.parent.localStorage.removeItem("usvisa_photo_state");
+function areCreatedPhotoFilesForCurrentPhoto() {
+  if (!currentPhotoFingerprint) {
+    return true;
+  }
+
+  const storedFingerprint = readStoredPhoto(
+    'usvisa_created_photo_files_fingerprint'
+  );
+
+  if (storedFingerprint) {
+    return storedFingerprint === currentPhotoFingerprint;
+  }
+
+  return isCreatedPhotoForFingerprint(currentPhotoFingerprint);
 }
+
+function getCleanPhotoForDownload() {
+  if (!areCreatedPhotoFilesForCurrentPhoto()) {
+    return '';
+  }
+
+  const storedCleanPhoto = readStoredPhoto('usvisa_clean_photo');
+
+  if (isFinalJpegPhoto(storedCleanPhoto)) {
+    return storedCleanPhoto;
+  }
+
+  if (
+    resultUrl &&
+    typeof resultUrl === 'string' &&
+    resultUrl.indexOf('data:image/jpeg') === 0
+  ) {
+    return resultUrl;
+  }
+
+  return '';
+}
+
+function isFinalJpegPhoto(photoUrl) {
+  return (
+    typeof photoUrl === 'string' &&
+    photoUrl.indexOf('data:image/jpeg') === 0
+  );
+}
+
+function getPaymentReturnFromUrl() {
+  const searchParams = new URLSearchParams(
+    window.parent.location.search
+  );
+
+  const orderId = searchParams.get('orderId') || '';
+  const product = searchParams.get('product') || 'basic';
+
+  if (
+    searchParams.get('paid') !== '1' ||
+    !orderId ||
+    !isDownloadProduct(product)
+  ) {
+    return null;
+  }
+
+  return {
+    orderId: orderId,
+    product: product
+  };
+}
+
+function getPaymentInterruptionFromUrl() {
+  const searchParams = new URLSearchParams(
+    window.parent.location.search
+  );
+
+  if (searchParams.get('canceled') === '1') {
+    return {
+      type: 'canceled',
+      message:
+        'Payment was canceled. Your preview is still ready if you want to checkout again.'
+    };
+  }
+
+  const paymentError = searchParams.get('payment_error') || '';
+
+  if (paymentError) {
+    return {
+      type: 'error',
+      message:
+        'Payment could not be completed. Please open checkout again when you are ready.'
+    };
+  }
+
+  return null;
+}
+
+function getActivePaymentReturnState() {
+  try {
+    const raw = window.parent.localStorage.getItem(
+      ACTIVE_PAYMENT_RETURN_KEY
+    );
+
+    if (!raw) {
+      return null;
+    }
+
+    const parsed = JSON.parse(raw);
+    const savedAt = Number(parsed && parsed.savedAt);
+
+    if (
+      !parsed ||
+      typeof parsed !== 'object' ||
+      !savedAt ||
+      Date.now() - savedAt > PENDING_PAYMENT_TTL_MS ||
+      !parsed.orderId ||
+      !isDownloadProduct(parsed.product) ||
+      !isPaymentStateForCurrentPhoto(
+        parsed,
+        parsed.orderId,
+        parsed.product
+      )
+    ) {
+      window.parent.localStorage.removeItem(ACTIVE_PAYMENT_RETURN_KEY);
+      return null;
+    }
+
+    return {
+      orderId: parsed.orderId,
+      product: parsed.product
+    };
+  } catch (error) {
+    console.error('ACTIVE PAYMENT RETURN READ ERROR:', error);
+    return null;
+  }
+}
+
+function saveActivePaymentReturnState(paymentReturn) {
+  if (
+    !paymentReturn ||
+    !paymentReturn.orderId ||
+    !isDownloadProduct(paymentReturn.product)
+  ) {
+    window.parent.localStorage.removeItem(ACTIVE_PAYMENT_RETURN_KEY);
+    return false;
+  }
+
+  const confirmedPayment = getConfirmedPaymentState(
+    paymentReturn.orderId,
+    paymentReturn.product
+  );
+  const activeFingerprint =
+    (confirmedPayment && confirmedPayment.fingerprint) ||
+    getCreatedPhotoFingerprint() ||
+    readStoredPhoto('usvisa_created_photo_files_fingerprint') ||
+    currentPhotoFingerprint ||
+    '';
+
+  if (!activeFingerprint) {
+    window.parent.localStorage.removeItem(ACTIVE_PAYMENT_RETURN_KEY);
+    return false;
+  }
+
+  window.parent.localStorage.setItem(
+    ACTIVE_PAYMENT_RETURN_KEY,
+    JSON.stringify({
+      orderId: paymentReturn.orderId,
+      product: paymentReturn.product,
+      fingerprint: activeFingerprint,
+      savedAt: Date.now()
+    })
+  );
+
+  return true;
+}
+
+function clearActivePaymentReturnState() {
+  window.parent.localStorage.removeItem(ACTIVE_PAYMENT_RETURN_KEY);
+  clearPaymentReturnParams();
+}
+
+function clearInterruptedPaymentState() {
+  window.parent.localStorage.removeItem(PENDING_PAYMENT_KEY);
+  window.parent.localStorage.removeItem(ACTIVE_PAYMENT_RETURN_KEY);
+  clearPaymentReturnParams();
+}
+
+function beginCheckoutForProduct(product) {
+  if (!isDownloadProduct(product)) {
+    return false;
+  }
+
+  window.parent.localStorage.removeItem(PENDING_PAYMENT_KEY);
+  clearActivePaymentReturnState();
+  return true;
+}
+
+function getCurrentPaidReturnState() {
+  const urlPaymentReturn = getPaymentReturnFromUrl();
+
+  if (urlPaymentReturn) {
+    if (
+      hasMatchingPaymentAccess(
+        urlPaymentReturn.orderId,
+        urlPaymentReturn.product
+      )
+    ) {
+      saveActivePaymentReturnState(urlPaymentReturn);
+      return urlPaymentReturn;
+    }
+
+    window.parent.localStorage.removeItem(ACTIVE_PAYMENT_RETURN_KEY);
+    return null;
+  }
+
+  const activePaymentReturn = getActivePaymentReturnState();
+
+  if (
+    activePaymentReturn &&
+    hasMatchingPaymentAccess(
+      activePaymentReturn.orderId,
+      activePaymentReturn.product
+    )
+  ) {
+    return activePaymentReturn;
+  }
+
+  window.parent.localStorage.removeItem(ACTIVE_PAYMENT_RETURN_KEY);
+  return null;
+}
+
+function getCurrentPaidDownloadKey() {
+  const paymentReturn = getCurrentPaidReturnState();
+
+  if (!paymentReturn) {
+    return '';
+  }
+
+  return [
+    'usvisa_download_count',
+    encodeURIComponent(paymentReturn.orderId),
+    encodeURIComponent(paymentReturn.product)
+  ].join(':');
+}
+
+function getCurrentPaidAutoDownloadKey() {
+  const paymentReturn = getCurrentPaidReturnState();
+
+  if (!paymentReturn) {
+    return '';
+  }
+
+  return [
+    AUTO_DOWNLOAD_PREFIX,
+    encodeURIComponent(paymentReturn.orderId),
+    ':',
+    encodeURIComponent(paymentReturn.product)
+  ].join('');
+}
+
+function hasAutoDownloadedForCurrentPaidReturn() {
+  const key = getCurrentPaidAutoDownloadKey();
+
+  return !!key && window.parent.localStorage.getItem(key) === '1';
+}
+
+function markAutoDownloadedForCurrentPaidReturn() {
+  const key = getCurrentPaidAutoDownloadKey();
+
+  if (key) {
+    window.parent.localStorage.setItem(key, '1');
+  }
+}
+
+function resetDownloadUiForDraftPhoto() {
+  if (downloadBtn) {
+    downloadBtn.dataset.downloadCount = '0';
+    downloadBtn.style.display = 'none';
+    setDownloadEnabled(false);
+  }
+
+  if (statusEl) {
+    statusEl.textContent = 'Upload a photo, then run Auto Detect.';
+  }
+}
+
+function getPendingPaymentState() {
+  try {
+    const raw =
+      window.parent.localStorage.getItem(PENDING_PAYMENT_KEY);
+
+    if (!raw) {
+      return null;
+    }
+
+    const parsed = JSON.parse(raw);
+
+    if (!parsed || typeof parsed !== 'object') {
+      return null;
+    }
+
+    return parsed;
+  } catch (error) {
+    console.error('PENDING PAYMENT READ ERROR:', error);
+    return null;
+  }
+}
+
+function getPaymentAccessKey(orderId, product) {
+  if (!orderId || !isDownloadProduct(product)) {
+    return '';
+  }
+
+  return [
+    CONFIRMED_PAYMENT_PREFIX,
+    encodeURIComponent(orderId),
+    ':',
+    encodeURIComponent(product)
+  ].join('');
+}
+
+function getConfirmedPaymentState(orderId, product) {
+  const key = getPaymentAccessKey(orderId, product);
+
+  if (!key) {
+    return null;
+  }
+
+  try {
+    const raw = window.parent.localStorage.getItem(key);
+
+    if (!raw) {
+      return null;
+    }
+
+    const parsed = JSON.parse(raw);
+
+    if (!parsed || typeof parsed !== 'object') {
+      return null;
+    }
+
+    return parsed;
+  } catch (error) {
+    console.error('CONFIRMED PAYMENT READ ERROR:', error);
+    return null;
+  }
+}
+
+function saveConfirmedPaymentState(paymentState) {
+  if (
+    !paymentState ||
+    !paymentState.orderId ||
+    !isDownloadProduct(paymentState.product) ||
+    !paymentState.fingerprint
+  ) {
+    return false;
+  }
+
+  const key = getPaymentAccessKey(
+    paymentState.orderId,
+    paymentState.product
+  );
+
+  if (!key) {
+    return false;
+  }
+
+  window.parent.localStorage.setItem(
+    key,
+    JSON.stringify({
+      orderId: paymentState.orderId,
+      product: paymentState.product,
+      fingerprint: paymentState.fingerprint,
+      confirmedAt: Date.now()
+    })
+  );
+
+  return true;
+}
+
+function isFreshPendingPayment(paymentState) {
+  if (!paymentState || !paymentState.createdAt) {
+    return false;
+  }
+
+  return Date.now() - Number(paymentState.createdAt) <=
+    PENDING_PAYMENT_TTL_MS;
+}
+
+function isPaymentStateForCurrentPhoto(paymentState, orderId, product) {
+  if (
+    !paymentState ||
+    paymentState.orderId !== orderId ||
+    paymentState.product !== product ||
+    !paymentState.fingerprint
+  ) {
+    return false;
+  }
+
+  if (
+    currentPhotoFingerprint &&
+    paymentState.fingerprint !== currentPhotoFingerprint
+  ) {
+    return false;
+  }
+
+  const filesFingerprint = readStoredPhoto(
+    'usvisa_created_photo_files_fingerprint'
+  );
+
+  if (
+    filesFingerprint &&
+    paymentState.fingerprint !== filesFingerprint
+  ) {
+    return false;
+  }
+
+  const createdFingerprint = getCreatedPhotoFingerprint();
+
+  if (
+    createdFingerprint &&
+    paymentState.fingerprint !== createdFingerprint
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
+function getOrderIdFromCheckoutUrl(checkoutUrl) {
+  try {
+    const url = new URL(checkoutUrl);
+
+    return (
+      url.searchParams.get('token') ||
+      url.searchParams.get('orderId') ||
+      ''
+    );
+  } catch {
+    return '';
+  }
+}
+
+function rememberPendingPayment(product, checkoutUrl) {
+  const orderId = getOrderIdFromCheckoutUrl(checkoutUrl);
+
+  if (!orderId || !isDownloadProduct(product)) {
+    window.parent.localStorage.removeItem(PENDING_PAYMENT_KEY);
+    return false;
+  }
+
+  const fingerprint =
+    currentPhotoFingerprint ||
+    readStoredPhoto('usvisa_created_photo_files_fingerprint') ||
+    getCreatedPhotoFingerprint();
+
+  if (!fingerprint) {
+    window.parent.localStorage.removeItem(PENDING_PAYMENT_KEY);
+    return false;
+  }
+
+  window.parent.localStorage.setItem(
+    PENDING_PAYMENT_KEY,
+    JSON.stringify({
+      orderId: orderId,
+      product: product,
+      fingerprint: fingerprint,
+      createdAt: Date.now()
+    })
+  );
+
+  return true;
+}
+
+function hasMatchingPaymentAccess(orderId, product) {
+  const confirmedPayment =
+    getConfirmedPaymentState(orderId, product);
+
+  if (
+    isPaymentStateForCurrentPhoto(
+      confirmedPayment,
+      orderId,
+      product
+    )
+  ) {
+    return true;
+  }
+
+  const pendingPayment = getPendingPaymentState();
+
+  if (
+    !isFreshPendingPayment(pendingPayment) ||
+    !isPaymentStateForCurrentPhoto(
+      pendingPayment,
+      orderId,
+      product
+    )
+  ) {
+    window.parent.localStorage.removeItem(PENDING_PAYMENT_KEY);
+    return false;
+  }
+
+  saveConfirmedPaymentState(pendingPayment);
+  window.parent.localStorage.removeItem(PENDING_PAYMENT_KEY);
+
+  return true;
+}
+
+function getCurrentPaidProduct() {
+  const paymentReturn = getCurrentPaidReturnState();
+  const product = paymentReturn ? paymentReturn.product : '';
+
+  return isDownloadProduct(product)
+    ? product
+    : 'unsupported';
+}
+
+function hasValidPaidReturn() {
+  return !!getCurrentPaidReturnState();
+}
+
+function isDownloadProduct(product) {
+  return [
+    'basic',
+    'basic-international',
+    'professional',
+    'professional-international'
+  ].indexOf(product) !== -1;
+}
+
+function getPurchasedFileLabels(product) {
+  switch (product) {
+    case 'basic-international':
+      return [
+        'HD U.S. Visa Photo',
+        'International 3.5 × 4.5 cm Photo'
+      ];
+    case 'professional':
+      return [
+        'Professional Retouched U.S. Visa Photo'
+      ];
+    case 'professional-international':
+      return [
+        'Professional Retouched U.S. Visa Photo',
+        'Professional International 3.5 × 4.5 cm Photo'
+      ];
+    case 'basic':
+      return [
+        'HD U.S. Visa Photo'
+      ];
+    default:
+      return [
+        'Purchased photo file'
+      ];
+  }
+}
+
+function getPaidDownloadFilename(fileType) {
+  switch (fileType) {
+    case 'basic-us':
+      return 'usvisaphoto_us_visa_2x2.jpg';
+    case 'basic-international':
+      return 'usvisaphoto_international_35x45.jpg';
+    case 'professional-us':
+      return 'usvisaphoto_professional_us_visa_2x2.jpg';
+    case 'professional-international':
+      return 'usvisaphoto_professional_international_35x45.jpg';
+    default:
+      return 'usvisaphoto_photo.jpg';
+  }
+}
+
+function getPaidDownloadFiles(product) {
+  if (!isDownloadProduct(product)) {
+    return getPurchasedFileLabels(product).map(function (label) {
+      return {
+        url: '',
+        filename: '',
+        label: label
+      };
+    });
+  }
+
+  if (!areCreatedPhotoFilesForCurrentPhoto()) {
+    return getPurchasedFileLabels(product).map(function (label) {
+      return {
+        url: '',
+        filename: '',
+        label: label
+      };
+    });
+  }
+
+  const cleanPhoto = getCleanPhotoForDownload();
+  const internationalPhoto =
+    readStoredPhoto('usvisa_pending_international_photo');
+  const professionalPhoto =
+    readStoredPhoto('usvisa_pending_professional_photo');
+  const professionalInternationalPhoto =
+    readStoredPhoto('usvisa_pending_professional_international_photo');
+
+  switch (product) {
+    case 'basic-international':
+      return [
+        {
+          url: cleanPhoto,
+          filename: getPaidDownloadFilename('basic-us'),
+          label: 'HD U.S. Visa Photo'
+        },
+        {
+          url: internationalPhoto,
+          filename: getPaidDownloadFilename('basic-international'),
+          label: 'International 3.5 × 4.5 cm Photo'
+        }
+      ];
+    case 'professional':
+      return [
+        {
+          url: professionalPhoto,
+          filename: getPaidDownloadFilename('professional-us'),
+          label: 'Professional Retouched U.S. Visa Photo'
+        }
+      ];
+    case 'professional-international':
+      return [
+        {
+          url: professionalPhoto,
+          filename: getPaidDownloadFilename('professional-us'),
+          label: 'Professional Retouched U.S. Visa Photo'
+        },
+        {
+          url: professionalInternationalPhoto,
+          filename: getPaidDownloadFilename('professional-international'),
+          label: 'Professional International 3.5 × 4.5 cm Photo'
+        }
+      ];
+    default:
+      return [
+        {
+          url: cleanPhoto,
+          filename: getPaidDownloadFilename('basic-us'),
+          label: 'HD U.S. Visa Photo'
+        }
+      ];
+  }
+}
+
+function getMissingPaidDownloadLabels(product) {
+  return getPaidDownloadFiles(product)
+    .filter(function (file) {
+      return !isFinalJpegPhoto(file.url);
+    })
+    .map(function (file) {
+      return file.label;
+    });
+}
+
+function hasAllPaidDownloadFiles(product) {
+  return getMissingPaidDownloadLabels(product).length === 0;
+}
+
+function getPaidDownloadCount() {
+  const key = getCurrentPaidDownloadKey();
+
+  if (!key) {
+    return 0;
+  }
+
+  return Number(
+    window.parent.localStorage.getItem(key) ||
+    '0'
+  );
+}
+
+function setPaidDownloadCount(downloadCount) {
+  const normalizedCount = Math.max(
+    0,
+    Math.floor(Number(downloadCount) || 0)
+  );
+
+  const key = getCurrentPaidDownloadKey();
+
+  downloadBtn.dataset.downloadCount = String(normalizedCount);
+
+  if (key) {
+    window.parent.localStorage.setItem(
+      key,
+      String(normalizedCount)
+    );
+  }
+
+  setPhotoDownloadCount(normalizedCount);
+
+  return normalizedCount;
+}
+
+function getRemainingPaidDownloads(downloadCount) {
+  return Math.max(
+    0,
+    MAX_PAID_DOWNLOADS -
+      Math.max(0, Math.floor(Number(downloadCount) || 0))
+  );
+}
+
+function getDownloadAttemptLabel(count) {
+  return count === 1 ? 'download' : 'downloads';
+}
+
+function updatePaidDownloadButton(downloadCount, product) {
+  if (!downloadBtn) return;
+
+  const paidProduct = product || getCurrentPaidProduct();
+
+  if (!hasAllPaidDownloadFiles(paidProduct)) {
+    downloadBtn.textContent = 'Photo files not ready';
+    setDownloadEnabled(false);
+    return;
+  }
+
+  const remainingDownloads =
+    getRemainingPaidDownloads(downloadCount);
+
+  if (remainingDownloads <= 0) {
+    downloadBtn.textContent = 'Download limit reached';
+    setDownloadEnabled(false);
+    return;
+  }
+
+  const remainingLabel =
+    remainingDownloads + ' ' +
+    getDownloadAttemptLabel(remainingDownloads) +
+    ' left';
+
+  downloadBtn.textContent =
+    downloadCount > 0
+      ? '⬇ Download Photos Again · ' + remainingLabel
+      : '⬇ Download Photos · ' + remainingLabel;
+  setDownloadEnabled(true);
+}
+
+function getPaidSuccessMessage(product, downloadCount) {
+  const missingLabels = getMissingPaidDownloadLabels(product);
+
+  if (missingLabels.length) {
+    return (
+      '<div style="line-height:1.7">' +
+      '<b>Payment confirmed.</b><br><br>' +
+      'We could not find these prepared file(s):<br>' +
+      missingLabels
+        .map(function (label) {
+          return '• ' + label;
+        })
+        .join('<br>') +
+      '<br><br>Please create the preview again for this photo.' +
+      '</div>'
+    );
+  }
+
+  const labels = getPurchasedFileLabels(product)
+    .map(function (label) {
+      return '✓ ' + label + ' Ready';
+    })
+    .join('<br>');
+
+  const remainingDownloads =
+    getRemainingPaidDownloads(downloadCount);
+
+  return (
+    '<div style="line-height:1.7">' +
+    '<b>✅ Payment Successful!</b><br><br>' +
+    labels +
+    '<br><br>' +
+    'Each click downloads your purchased file set once.<br>' +
+    'Remaining downloads: <b>' +
+    remainingDownloads +
+    '</b> of ' +
+    MAX_PAID_DOWNLOADS +
+    '.' +
+    '</div>'
+  );
+}
+
+function triggerPhotoDownload(photoUrl, filename) {
+  if (!photoUrl) {
+    return false;
+  }
+
+  const link = document.createElement('a');
+  link.href = photoUrl;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+
+  return true;
+}
+
+function triggerPhotoDownloads(files) {
+  let queuedCount = 0;
+
+  files.forEach(function (file) {
+    if (
+      !file ||
+      !isFinalJpegPhoto(file.url) ||
+      !file.filename ||
+      file.filename.slice(-4).toLowerCase() !== '.jpg'
+    ) {
+      return;
+    }
+
+    const delay = queuedCount * 500;
+
+    setTimeout(function () {
+      triggerPhotoDownload(file.url, file.filename);
+    }, delay);
+
+    queuedCount += 1;
+  });
+
+  return queuedCount;
+}
+
+function isStoredProfessionalForCurrentPhoto() {
+  if (!currentPhotoFingerprint) {
+    return true;
+  }
+
+  const storedFingerprint =
+    readStoredPhoto('usvisa_pending_professional_photo_fingerprint');
+
+  return storedFingerprint === currentPhotoFingerprint;
+}
+
+function registerTempDownloadHandler() {
+  if (!tempDownloadBtn || tempDownloadBtn.dataset.bound === '1') {
+    return;
+  }
+
+  tempDownloadBtn.dataset.bound = '1';
+
+  tempDownloadBtn.addEventListener('click', function () {
+    const password = window.prompt('Temporary access password');
+
+    if (password !== '7022') {
+      alert('Wrong password');
+      return;
+    }
+
+    const clean = readStoredPhoto('usvisa_clean_photo');
+    const professional = readStoredPhoto('usvisa_pending_professional_photo');
+
+  if (clean) {
+      if (areCreatedPhotoFilesForCurrentPhoto()) {
+        triggerPhotoDownload(clean, 'us_visa_photo_test.jpg');
+      }
+    }
+
+    if (
+      professional &&
+      areCreatedPhotoFilesForCurrentPhoto() &&
+      isStoredProfessionalForCurrentPhoto()
+    ) {
+      triggerPhotoDownload(
+        professional,
+        'professional_retouch_test.jpg'
+      );
+    }
+  });
+}
+
+registerTempDownloadHandler();
+
 let currentPhotoFingerprint = '';
 
 async function createPhotoFingerprint(file) {
@@ -563,6 +1621,14 @@ async function createPhotoFingerprint(file) {
   ].join(':');
 }
 function restorePreviouslyCreatedPhoto() {
+  if (
+    currentPhotoFingerprint &&
+    !isCreatedPhotoForFingerprint(currentPhotoFingerprint)
+  ) {
+    clearPaymentState();
+    return false;
+  }
+
   const savedCleanPhoto =
     window.parent.localStorage.getItem(
       'usvisa_clean_photo'
@@ -573,18 +1639,12 @@ function restorePreviouslyCreatedPhoto() {
       'usvisa_protected_preview'
     );
 
-  console.log('RESTORE PHOTO DEBUG', {
-    hasCleanPhoto: !!savedCleanPhoto,
-    hasProtectedPreview: !!savedProtectedPreview,
-    cleanPhotoStart: savedCleanPhoto
-      ? savedCleanPhoto.slice(0, 30)
-      : null,
-    protectedPreviewStart: savedProtectedPreview
-      ? savedProtectedPreview.slice(0, 30)
-      : null
-  });
-
   if (!savedProtectedPreview) {
+    return false;
+  }
+
+  if (!areCreatedPhotoFilesForCurrentPhoto()) {
+    clearPaymentState();
     return false;
   }
 
@@ -643,9 +1703,6 @@ function restorePreviouslyCreatedPhoto() {
       TARGET
     );
 
-    console.log(
-      'PREVIEW RESTORED SUCCESSFULLY'
-    );
   };
 
   restoredImage.onerror = function (error) {
@@ -719,26 +1776,33 @@ pctx.restore();
   });
 }
 function resetForNewUpload() {
-  console.trace('RESET_FOR_NEW_UPLOAD_CALLED');
-
 professionalPreviewLocked = false;
 autoDetectLocked = false;
 
+  currentPhotoFingerprint = '';
+  uploadedFile = null;
   uploadedImg = null;
   bgRemovedImg = null;
+  detectedLm = null;
+  lockedDetection = null;
+  lockedDetectionFingerprint = '';
   resultUrl = null;
   faceTiltAngle = 0;
   autoDetectLocked = false;
   guideMode = 'auto';
+  photoValidationPassed = false;
+  window.usvisaRecoverable = false;
+  window.usvisaLastValidationReport = null;
 
   setDetectButtonState('auto');
 
+  showCreatePhotoButton();
   setCreateEnabled(false);
-  setDownloadEnabled(false);
+  resetDownloadUiForDraftPhoto();
   resetValidationUI();
   createBtn.textContent = 'Create Photo';
-  downloadBtn.style.display = 'none';
   updateBasicPackageButton();
+  resetDownloadUiForDraftPhoto();
   canvas.style.display = 'none';
   if (resultPanel) resultPanel.style.display = 'none';
   if (uploadTips) uploadTips.style.display = 'block';
@@ -747,6 +1811,29 @@ autoDetectLocked = false;
   previewImg.style.display = 'none';
   previewImg.src = '';
   placeholder.style.display = 'flex';
+
+  if (retouchImage) {
+    retouchImage.removeAttribute('src');
+    retouchImage.style.display = 'none';
+  }
+
+  if (retouchPreview) {
+    retouchPreview.style.display = 'none';
+  }
+
+  if (professionalCard) {
+    professionalCard.style.display = 'none';
+  }
+
+  if (premiumCreateBtn) {
+    premiumCreateBtn.style.display = 'none';
+    premiumCreateBtn.disabled = true;
+  }
+
+  if (professionalRetouchBtn) {
+    professionalRetouchBtn.style.display = '';
+    applyProfessionalPreviewDailyState();
+  }
 }
 
 fileInput.addEventListener('change', async function(e) {
@@ -762,6 +1849,7 @@ fileInput.addEventListener('change', async function(e) {
   try {
     currentPhotoFingerprint =
       await createPhotoFingerprint(file);
+    applyProfessionalPreviewDailyState();
 
     const photoState = getPhotoState();
 
@@ -790,7 +1878,7 @@ fileInput.addEventListener('change', async function(e) {
 
     clearPaymentState();
 
-    createBtn.disabled = false;
+    setCreateEnabled(false);
     createBtn.textContent = 'Create Photo';
 
     statusEl.textContent =
@@ -804,7 +1892,7 @@ fileInput.addEventListener('change', async function(e) {
     currentPhotoFingerprint = '';
     clearPaymentState();
 
-    createBtn.disabled = false;
+    setCreateEnabled(false);
     createBtn.textContent = 'Create Photo';
 
     statusEl.textContent =
@@ -828,6 +1916,8 @@ fileInput.addEventListener('change', async function(e) {
     setTimeout(function () {
   cachedContainRect = null;
   initGuideLines();
+
+  restoreStoredAutoDetectResult();
 }, 100);
   };
 
@@ -905,239 +1995,79 @@ function validateDetectedPhoto(lm, iw, ih) {
 
   if (checkFace) checkFace.textContent = '🟢 Face detected';
 
-  const eyeResult = detectEyes(lm);
-
-  const leftEyeRatio = eyeResult.leftEyeRatio;
-  const rightEyeRatio = eyeResult.rightEyeRatio;
-  const eyesClosed = eyeResult.eyesClosed;
+  const validation = evaluateDetectedPhoto(lm, iw, ih);
+  const eyesClosed = validation.eyeResult.eyesClosed;
+  const mouthOpenDetected = validation.mouthResult.mouthOpened;
 
   if (checkEyes) {
     checkEyes.textContent = eyesClosed ? '🔴 Eyes may be closed' : '🟢 Eyes open';
   }
 
-  if (eyesClosed) {
-    showValidationError(
-      '❌ Eyes may be closed.<br>Please upload another photo with both eyes open.'
-    );
-    return false;
-  }
-
-  const mouthResult = detectMouth(lm);
-
-const mouthRatio = mouthResult.mouthRatio;
-const mouthOpenDetected = mouthResult.mouthOpened;
-
   if (checkMouth) {
     checkMouth.textContent = mouthOpenDetected ? '🔴 Mouth should be closed' : '🟢 Mouth closed';
-  }
-
-  if (mouthOpenDetected) {
-    showValidationError(
-      '❌ Mouth should be closed.<br>Please upload a photo with a neutral expression.'
-    );
-    return false;
   }
 
   if (checkGlasses) {
     checkGlasses.textContent = '🟢 No glasses detected';
   }
 
-  const headMetrics = getHeadMetrics(lm, iw, ih);
+  if (checkPosition) {
+    checkPosition.textContent = validation.pass
+      ? '🟢 Head position and hat check passed'
+      : '🔴 Head position / hat check failed';
+  }
 
-const foreheadY = headMetrics.foreheadY;
-const chinY = headMetrics.chinY;
-const faceHeight = headMetrics.faceHeight;
-const eyebrowTopY = Math.min(
-  lm[70].y * ih,
-  lm[300].y * ih,
-  lm[105].y * ih,
-  lm[334].y * ih
-);
+  if (!validation.pass) {
+    if (validation.failureReason === 'eyesClosed') {
+      showValidationError(
+        '❌ Eyes may be closed.<br>Please upload another photo with both eyes open.'
+      );
+      return false;
+    }
 
-const chinToEyebrow = chinY - eyebrowTopY;
+    if (validation.failureReason === 'mouthOpen') {
+      showValidationError(
+        '❌ Mouth should be closed.<br>Please upload a photo with a neutral expression.'
+      );
+      return false;
+    }
 
-const estimatedCrownY = Math.max(
-  0,
-  eyebrowTopY - chinToEyebrow * 0.42
-);
-const crownToChinRatio = headMetrics.crownToChinRatio;
-const bottomSpaceRatio = headMetrics.bottomSpaceRatio;
-const headHeightPx = Math.max(1, chinY - estimatedCrownY);
-const lowerBodyRoomRatio = (ih - chinY) / headHeightPx;
+    if (validation.failureReason === 'hat') {
+      showValidationError(
+        'Hat or head covering detected.<br>Please upload a photo without hats or head coverings.'
+      );
+      return false;
+    }
 
-const shoulderRoomRatio = bottomSpaceRatio;
-const headTooLargeForSource = crownToChinRatio > 0.52;
-const upperBodyTooClose = lowerBodyRoomRatio < 1.15;
-const shouldersLikelyCropped = shoulderRoomRatio < 0.30;
+    if (validation.failureReason === 'direction') {
+      showValidationError(
+        'Face is not straight.<br>Please look directly at the camera with your head facing forward.'
+      );
+      return false;
+    }
 
-console.log({
-  crownToChinRatio,
-  lowerBodyRoomRatio,
-  shoulderRoomRatio,
-  headTooLargeForSource,
-  upperBodyTooClose,
-  shouldersLikelyCropped
-});
+    if (validation.failureReason === 'upperBodyTight') {
+      showValidationError(
+        'Photo is too close.<br>Please upload a photo taken from farther away, showing both shoulders and upper body.'
+      );
+      return false;
+    }
 
-
-const upperBodyHardFail =
-  headTooLargeForSource ||
-  shouldersLikelyCropped ||
-  (upperBodyTooClose && shoulderRoomRatio < 0.38);
-  
-const upperBodyWarning =
-  !upperBodyHardFail && (
-    lowerBodyRoomRatio < 1.45 ||
-    bottomSpaceRatio < 0.40 ||
-    crownToChinRatio > 0.46
-  );
-
-const upperBodyTooTight = upperBodyHardFail;
-
-  const faceDirection = detectFaceDirection(lm);
-
-const yawRatio = faceDirection.yawRatio;
-const noseOffsetRatio = faceDirection.noseOffsetRatio;
-const faceNotStraight = faceDirection.faceNotStraight;
-const sideFace = yawRatio < 0.72;
-
-const foreheadToTopRatio = estimatedCrownY / ih;
-
-const eyebrowToCrownRatio = Math.abs(eyebrowTopY - estimatedCrownY) / Math.max(1, faceHeight);
-const foreheadHiddenByObject = eyebrowToCrownRatio < 0.22;
-
-const capBrimLikely =
-  Math.abs(lm[10].y - lm[151].y) < 0.018 ||
-  Math.abs(lm[9].y - lm[10].y) < 0.018;
-
-const hatLikelyDetected =
-  capBrimLikely &&
-  foreheadToTopRatio < 0.08 &&
-  crownToChinRatio > 0.32;
-
-
-
-  const faceLeftX = lm[234].x;
-const faceRightX = lm[454].x;
-const faceCenterX = (faceLeftX + faceRightX) / 2;
-const faceWidthRatio = Math.abs(faceRightX - faceLeftX);
-
-const faceCenteredOk =
-  faceCenterX > 0.38 &&
-  faceCenterX < 0.62;
-
-const faceWidthOk =
-  faceWidthRatio < 0.48;
- const headSizeOk = crownToChinRatio <= 0.68;
-const bottomSpaceOk = bottomSpaceRatio >= 0.10;
-
-let validationScore = 100;
-
-if (!headSizeOk) validationScore -= 10;
-if (!faceCenteredOk) validationScore -= 15;
-if (!faceWidthOk) validationScore -= 12;
-if (!bottomSpaceOk) validationScore -= 8;
-if (upperBodyTooTight) validationScore -= 8;
-if (sideFace) validationScore -= 25;
-if (faceNotStraight) validationScore -= 25;
-if (hatLikelyDetected) validationScore -= 40;
-
-validationScore = Math.max(0, Math.min(100, validationScore));
-
-const directionHardFail =
-    sideFace && faceNotStraight;
-
-const shoulderLikelyCropped =
-  crownToChinRatio > 0.46 &&
-  bottomSpaceRatio < 0.34 &&
-  validationScore < 90;
-
-const tightIdPhotoCrop =
-  (crownToChinRatio > 0.52 && bottomSpaceRatio < 0.24) ||
-  (crownToChinRatio > 0.62 && bottomSpaceRatio < 0.32) ||
-  crownToChinRatio > 0.70;
-
-const compositionHardFail =
-  tightIdPhotoCrop || shoulderLikelyCropped;
-  
-const alreadyCropped =
-  hatLikelyDetected ||
-  directionHardFail ||
-  compositionHardFail ||
-  shouldersLikelyCropped ||
-  
-console.log("========== PHOTO DEBUG ==========");
-
-console.table({
-  validationScore,
-  headSizeOk,
-  bottomSpaceOk,
-  upperBodyTooTight,
-  sideFace,
-  faceNotStraight,
-  hatLikelyDetected,
-  alreadyCropped,
-  crownToChinRatio,
-  bottomSpaceRatio
-});
-
-if (checkPosition) {
-  checkPosition.textContent = alreadyCropped
-    ? '🔴 Head position / hat check failed'
-    : '🟢 Head position and hat check passed';
-}
-
- if (alreadyCropped) {
-  if (hatLikelyDetected) {
     showValidationError(
-      'Hat or head covering detected.<br>Please upload a photo without hats or head coverings.'
+      'This looks like an already-cropped ID/passport photo.<br>Please upload the original photo taken from farther away, with shoulders visible.'
     );
     return false;
   }
-
-  if (faceNotStraight || sideFace) {
-    showValidationError(
-      'Face is not straight.<br>Please look directly at the camera with your head facing forward.'
-    );
-    return false;
-  }
-
-  if (upperBodyTooTight) {
-    showValidationError(
-      'Photo is too close.<br>Please upload a photo taken from farther away, showing both shoulders and upper body.'
-    );
-    return false;
-  }
-
-  showValidationError(
-    'This looks like an already-cropped ID/passport photo.<br>Please upload the original photo taken from farther away, with shoulders visible.'
-  );
-  return false;
-}
- let score = validationScore;
-
-if (window.usvisaPhotoDateWarning) {
-  score = Math.min(score, 98);
-}
-
-score = Math.max(80, Math.min(100, score));
 
   window.usvisaLastValidationReport = {
-    score: score,
-    headSizeText: 'Head size within accepted range',
-    centerText: 'Face centered and forward-facing',
-    originalText: 'Original photo check passed',
-    metrics: {
-      crownToChinRatio: crownToChinRatio,
-      bottomSpaceRatio: bottomSpaceRatio,
-      yawRatio: yawRatio
-    }
+    score: validation.score,
+    headSizeText: validation.report.headSizeText,
+    centerText: validation.report.centerText,
+    originalText: validation.report.originalText,
+    metrics: validation.report.metrics
   };
 
-  return {
-    estimatedCrownY: estimatedCrownY,
-    detectedChinY: chinY
-  };
+  return validation;
 }
 detectBtn.addEventListener('click', async function(e) {
   e.preventDefault();
@@ -1154,6 +2084,20 @@ detectBtn.addEventListener('click', async function(e) {
     statusEl.textContent = 'Please upload a photo first.';
     setCreateEnabled(false);
     return;
+  }
+
+  clearCreatedPhotoState(currentPhotoFingerprint);
+  clearPaymentState();
+  lockedDetection = null;
+  detectedLm = null;
+  lockedDetectionFingerprint = '';
+  photoValidationPassed = false;
+  window.usvisaRecoverable = false;
+  window.usvisaLastValidationReport = null;
+  resultUrl = null;
+  setDownloadEnabled(false);
+  if (downloadBtn) {
+    downloadBtn.style.display = 'none';
   }
 
   setCreateEnabled(false);
@@ -1347,23 +2291,41 @@ if (!validation) return;
 
 lockedDetection = {
   landmarks: lm,
-  iw: iw,
-  ih: ih,
-  faceTiltAngle: faceTiltAngle,
-  crownY: validation.estimatedCrownY,
-  chinY: validation.detectedChinY
-};
 
+  iw,
+  ih,
+
+  imageWidth: iw,
+  imageHeight: ih,
+
+  faceTiltAngle,
+
+  crownY: validation.estimatedCrownY,
+  chinY: validation.detectedChinY,
+
+  foreheadY: validation.foreheadY,
+  faceHeight: validation.faceHeight
+};
+lockedDetectionFingerprint = currentPhotoFingerprint || '';
 
 if (poseRecoverable) {
   window.usvisaRecoverable = true;
 
+  const recoverableMessage =
+    'This photo is cropped too tightly for Basic Photo creation.<br><br>' +
+    'Professional Retouch can extend the clothing and shoulder area automatically.';
+
   photoValidationPassed = false;
   autoDetectLocked = true;
 
+  saveAutoDetectRecoverable(
+    currentPhotoFingerprint,
+    lockedDetection,
+    recoverableMessage
+  );
+
   showValidationRecoverable(
-    'This photo is cropped too tightly for Basic Photo creation.<br><br>' +
-    'Professional Retouch can extend the clothing and shoulder area automatically.'
+    recoverableMessage
   );
 
   setDetectButtonState('warning');
@@ -1379,8 +2341,7 @@ if (poseRecoverable) {
 
   if (professionalRetouchBtn) {
     professionalRetouchBtn.style.display = 'block';
-    professionalRetouchBtn.disabled = false;
-    updateProfessionalPackageButton();
+    applyProfessionalPreviewDailyState();
   }
 
   if (expertCard) {
@@ -1400,6 +2361,11 @@ chinLine.style.display = 'none';
 
 photoValidationPassed = true;  
 setDetectButtonState('success');
+saveAutoDetectPass(
+  currentPhotoFingerprint,
+  lockedDetection,
+  window.usvisaLastValidationReport
+);
 showValidationReady();
 
 
@@ -1996,6 +2962,31 @@ async function createInternationalPhotoFromResult(sourceUrl) {
     'international'
   );
 
+formData.append(
+  "foreheadY",
+  String(lockedDetection.foreheadY)
+);
+
+formData.append(
+  "chinY",
+  String(lockedDetection.chinY)
+);
+
+formData.append(
+  "faceHeight",
+  String(lockedDetection.faceHeight)
+);
+
+formData.append(
+  "imageWidth",
+  String(lockedDetection.imageWidth)
+);
+
+formData.append(
+  "imageHeight",
+  String(lockedDetection.imageHeight)
+);
+
   const response = await fetch(
     '/api/final-photo',
     {
@@ -2043,12 +3034,20 @@ async function createInternationalPhotoFromResult(sourceUrl) {
   );
 }
 
+let createPhotoBusy = false;
 
 createBtn.addEventListener('click', async function(e) {
   e.preventDefault();
 
-  const photoState = getPhotoState();
+  if (createPhotoBusy) {
+    return;
+  }
 
+ 
+ 
+
+  const photoState = getPhotoState();
+  
 if (
   photoState.fingerprint === currentPhotoFingerprint &&
   photoState.created === true
@@ -2062,18 +3061,25 @@ if (
     return;
   }
 
-  if (!photoValidationPassed || !lockedDetection) {
+  if (!photoValidationPassed || !hasLockedDetectionForCurrentPhoto()) {
     statusEl.textContent = 'Please click Auto Detect before creating your photo.';
     setCreateEnabled(false);
+    lockedDetection = null;
+    lockedDetectionFingerprint = '';
     return;
   }
+
+  createPhotoBusy = true;
+  let createSucceeded = false;
 
   try {
     setCreateEnabled(false);
     createBtn.textContent = 'Creating...';
 statusEl.textContent = 'Creating your photo...';
 
-window.parent.localStorage.removeItem("usvisa_pending_professional_photo");
+writeStoredPhoto('usvisa_pending_professional_photo', '');
+writeStoredPhoto('usvisa_pending_professional_international_photo', '');
+writeStoredPhoto('usvisa_pending_professional_photo_fingerprint', '');
 
 if (retouchImage) {
   retouchImage.removeAttribute('src');
@@ -2084,8 +3090,7 @@ if (retouchPreview) {
 }
 
 if (professionalRetouchBtn) {
-  professionalRetouchBtn.disabled = false;
-  updateProfessionalPackageButton();
+  applyProfessionalPreviewDailyState();
 }
 if (!bgRemovedImg) {
       bgRemovedImg = await removeBackgroundWithPhotoRoom();
@@ -2094,10 +3099,7 @@ if (!bgRemovedImg) {
     const rawCleanUrl = drawFinalPhoto(bgRemovedImg);
 const cleanUrl = await createFinalJpegWithSharp(rawCleanUrl);
     resultUrl = cleanUrl;
-    savePhotoState({
-  fingerprint: currentPhotoFingerprint,
-  created: true
-});
+    markPhotoCreated(currentPhotoFingerprint);
   setCreateEnabled(false);
 createBtn.textContent = '✔ Preview Ready';
 statusEl.innerHTML =
@@ -2109,8 +3111,7 @@ if (professionalCard) {
 
 if (professionalRetouchBtn) {
   professionalRetouchBtn.style.display = 'block';
-  professionalRetouchBtn.disabled = false;
-  updateProfessionalPackageButton();
+  applyProfessionalPreviewDailyState();
 }
 
   setDownloadEnabled(true);
@@ -2126,7 +3127,7 @@ downloadBtn.textContent =
   const internationalPhoto =
     await createInternationalPhotoFromResult(cleanUrl);
 
-  window.parent.localStorage.setItem(
+  writeStoredPhoto(
     'usvisa_pending_international_photo',
     internationalPhoto
   );
@@ -2136,13 +3137,15 @@ downloadBtn.textContent =
     error
   );
 
-  window.parent.localStorage.removeItem(
-    'usvisa_pending_international_photo'
+  writeStoredPhoto(
+    'usvisa_pending_international_photo',
+    ''
   );
 }
 
-    window.parent.localStorage.setItem('usvisa_clean_photo', cleanUrl);
-    window.parent.localStorage.setItem('usvisa_download_count', '0');
+    writeStoredPhoto('usvisa_clean_photo', cleanUrl);
+    downloadBtn.dataset.downloadCount = '0';
+    setPhotoDownloadCount(0);
 
     const protectedCanvas = document.createElement('canvas');
     protectedCanvas.width = TARGET;
@@ -2161,44 +3164,16 @@ downloadBtn.textContent =
     applyPreviewProtection(pctx, TARGET, TARGET);
     
 
-    window.parent.localStorage.setItem(
+    writeStoredPhoto(
       'usvisa_protected_preview',
      protectedCanvas.toDataURL('image/png')
     );
 
+    markCreatedPhotoFilesForCurrentPhoto();
+
     ctx.clearRect(0, 0, TARGET, TARGET);
     ctx.drawImage(protectedCanvas, 0, 0);
     
-
-    if (tempDownloadBtn) {
-  tempDownloadBtn.addEventListener('click', function () {
-    const password = window.prompt('Temporary access password');
-
-    if (password !== '7022') {
-      alert('Wrong password');
-      return;
-    }
-
-    const clean = window.parent.localStorage.getItem('usvisa_clean_photo');
-    const professional = window.parent.localStorage.getItem('usvisa_pending_professional_photo');
-
-    if (clean) {
-      const a = document.createElement('a');
-      a.href = clean;
-      a.download = 'us_visa_photo_test.jpg';
-      a.click();
-    }
-
-    if (professional) {
-      const a = document.createElement('a');
-      a.href = professional;
-     a.download = 'professional_retouch_test.jpg';
-      a.click();
-    }
-  });
-}
-
-
 
 canvas.style.display = 'block';
 
@@ -2228,6 +3203,7 @@ downloadBtn.style.display = 'inline-flex';
 
     setDownloadEnabled(true);
     statusEl.textContent = 'Preview created. Unlock download to receive the clean photo.';
+    createSucceeded = true;
 
   } catch (err) {
     console.error('CREATE PHOTO ERROR:', err);
@@ -2235,7 +3211,14 @@ downloadBtn.style.display = 'inline-flex';
   "Photo processing is temporarily unavailable. Please try again shortly.";
     setCreateEnabled(true);
   } finally {
-    createBtn.textContent = 'Create Photo';
+    createPhotoBusy = false;
+
+    if (createSucceeded) {
+      setCreateEnabled(false);
+      createBtn.textContent = '✔ Preview Ready';
+    } else {
+      createBtn.textContent = 'Create Photo';
+    }
   }
 });
 
@@ -2266,12 +3249,13 @@ function applyProfessionalPreviewDailyState() {
   if (!professionalRetouchBtn) return;
 
   const savedProfessionalPhoto =
-    window.parent.localStorage.getItem(
-      'usvisa_pending_professional_photo'
-    );
+    readStoredPhoto('usvisa_pending_professional_photo');
 
   if (hasUsedProfessionalPreviewToday()) {
-    if (savedProfessionalPhoto) {
+    if (
+      savedProfessionalPhoto &&
+      isStoredProfessionalForCurrentPhoto()
+    ) {
       professionalRetouchBtn.disabled = false;
       professionalRetouchBtn.innerHTML =
         '<span class="professional-preview-button-title">' +
@@ -2303,14 +3287,18 @@ if (professionalRetouchBtn) {
   professionalRetouchBtn.addEventListener('click', async function (e) {
   e.preventDefault();
   e.stopPropagation();
+
+  if (professionalRetouchBusy) {
+    return;
+  }
+
    const savedProfessionalPhoto =
-    window.parent.localStorage.getItem(
-      'usvisa_pending_professional_photo'
-    );
+    readStoredPhoto('usvisa_pending_professional_photo');
 
   if (
     hasUsedProfessionalPreviewToday() &&
-    savedProfessionalPhoto
+    savedProfessionalPhoto &&
+    isStoredProfessionalForCurrentPhoto()
   ) {
     if (retouchImage) {
       const protectedProfessionalPreview =
@@ -2358,13 +3346,17 @@ const retouchTimer = setInterval(function () {
 }, 1000);
 
 professionalPreviewLocked = true;
+professionalRetouchBusy = true;
+professionalRetouchBtn.disabled = true;
 
 try {
  if (!uploadedFile || !uploadedImg) {
   throw new Error('Please upload a photo first.');
 }
 
-if (!lockedDetection) {
+if (!hasLockedDetectionForCurrentPhoto()) {
+  lockedDetection = null;
+  lockedDetectionFingerprint = '';
   throw new Error(
     'Face measurements are not available. Please run Auto Detect again.'
   );
@@ -2412,11 +3404,6 @@ const res = await fetch('/api/professional-retouch', {
 });
 
       const data = await res.json();
-      console.log('Professional Retouch API:', data);
-  console.log(
-  'Professional Preview Length:',
-  data.professionalPreview ? data.professionalPreview.length : 0
-);
    
      if (!res.ok) {
  throw new Error("We couldn't process your photo. Please try again.");
@@ -2432,9 +3419,22 @@ const finalProfessionalJpg =
 const protectedProfessionalPreview =
   await createProtectedProfessionalPreview(finalProfessionalJpg);
 
-window.parent.localStorage.setItem(
+writeStoredPhoto(
   'usvisa_pending_professional_photo',
   finalProfessionalJpg
+);
+
+writeStoredPhoto(
+  'usvisa_pending_professional_photo_fingerprint',
+  currentPhotoFingerprint
+);
+
+const professionalInternationalPhoto =
+  await createInternationalPhotoFromResult(finalProfessionalJpg);
+
+writeStoredPhoto(
+  'usvisa_pending_professional_international_photo',
+  professionalInternationalPhoto
 );
 
 if (retouchImage) {
@@ -2492,24 +3492,58 @@ professionalRetouchBtn.style.display = 'none';
  } catch (err) {
   clearInterval(retouchTimer);
   console.error('Professional Retouch Error:', err);
-      professionalRetouchBtn.style.display = 'none';
+  professionalRetouchBtn.style.display = 'block';
+  statusEl.textContent =
+    'Professional Preview failed. Please try again shortly.';
    } finally {
+  professionalRetouchBusy = false;
+  professionalPreviewLocked = false;
   if (professionalRetouchBtn.textContent !== 'Preview Ready') {
-    professionalRetouchBtn.disabled = false;
+    applyProfessionalPreviewDailyState();
   }
 }
   });
 }
 
 premiumCreateBtn?.addEventListener('click', async function () {
+  const savedProfessionalPhoto =
+    readStoredPhoto('usvisa_pending_professional_photo');
+  const withInternational =
+    professionalInternationalCheckbox &&
+    professionalInternationalCheckbox.checked;
+  const checkoutProduct = withInternational
+    ? 'professional-international'
+    : 'professional';
+
+  if (
+    !savedProfessionalPhoto ||
+    !isStoredProfessionalForCurrentPhoto()
+  ) {
+    statusEl.textContent =
+      'Please create your Professional Preview before checkout.';
+    premiumCreateBtn.disabled = false;
+    updateProfessionalPackageButton();
+    return;
+  }
+
+  if (
+    withInternational &&
+    !isFinalJpegPhoto(
+      readStoredPhoto('usvisa_pending_professional_international_photo')
+    )
+  ) {
+    statusEl.textContent =
+      'Professional international photo is still preparing. Please try again shortly.';
+    premiumCreateBtn.disabled = false;
+    updateProfessionalPackageButton();
+    return;
+  }
+
   premiumCreateBtn.disabled = true;
   premiumCreateBtn.textContent = 'Opening checkout...';
+  beginCheckoutForProduct(checkoutProduct);
 
   try {
-    const withInternational =
-      professionalInternationalCheckbox &&
-      professionalInternationalCheckbox.checked;
-
     const response = await fetch('/api/create-paypal-order', {
       method: 'POST',
       headers: {
@@ -2526,6 +3560,10 @@ premiumCreateBtn?.addEventListener('click', async function () {
 
     if (!response.ok || !data.url) {
       throw new Error(data.error || 'No checkout URL');
+    }
+
+    if (!rememberPendingPayment(checkoutProduct, data.url)) {
+      throw new Error('Checkout could not be linked to this photo.');
     }
 
     window.parent.location.href = data.url;
@@ -2578,26 +3616,40 @@ expertEditBtn?.addEventListener('click', async function () {
 });
 
 downloadBtn.addEventListener('click', async function() {
-  if (!resultUrl) {
-    statusEl.textContent = 'Please create your photo first.';
-    return;
-  }
-
   const searchParams = new URLSearchParams(
   window.parent.location.search
 );
 
-const isPaid = searchParams.get('paid') === '1';
-const paidProduct = searchParams.get('product') || 'basic';
+const isPaid = hasValidPaidReturn();
+const paidProduct = getCurrentPaidProduct();
+
+if (searchParams.get('paid') === '1' && !isPaid) {
+  clearPaymentReturnParams();
+  statusEl.textContent =
+    'Payment confirmation is incomplete. Please open checkout again.';
+  updateBasicPackageButton();
+  return;
+}
+
+if (
+  currentPhotoFingerprint &&
+  !isCreatedPhotoForFingerprint(currentPhotoFingerprint)
+) {
+  clearPaymentState();
+  resultUrl = null;
+  statusEl.textContent =
+    'This saved preview belongs to another photo. Please create this photo again.';
+  setDownloadEnabled(false);
+  updateBasicPackageButton();
+  return;
+}
 
 if (isPaid) {
-  const count = Number(
-    window.parent.localStorage.getItem('usvisa_download_count') ||
-    downloadBtn.dataset.downloadCount ||
-    '0'
-  );
+  const count = getPaidDownloadCount();
+  const paidFiles = getPaidDownloadFiles(paidProduct);
+  const missingLabels = getMissingPaidDownloadLabels(paidProduct);
 
-  if (count >= 5) {
+  if (count >= MAX_PAID_DOWNLOADS) {
     statusEl.textContent =
       'Download limit reached. Please start a new order if needed.';
 
@@ -2606,88 +3658,65 @@ if (isPaid) {
     return;
   }
 
-  if (paidProduct === 'professional') {
-    const professionalPhoto =
-      window.parent.localStorage.getItem(
-        'usvisa_pending_professional_photo'
-      );
-
-    if (!professionalPhoto) {
-      statusEl.textContent =
-        'Professional photo could not be found. Please create the preview again.';
-      return;
-    }
-
-    const professionalLink = document.createElement('a');
-    professionalLink.href = professionalPhoto;
-    professionalLink.download = 'professional_us_visa_photo.jpg';
-    professionalLink.click();
-  } else if (paidProduct === 'basic') {
-    const basicLink = document.createElement('a');
-    basicLink.href = resultUrl;
-    basicLink.download = 'us_visa_photo.jpg';
-    basicLink.click();
-} else if (paidProduct === 'basic-international') {
-  const internationalPhoto =
-    window.parent.localStorage.getItem(
-      'usvisa_pending_international_photo'
+  if (missingLabels.length) {
+    statusEl.innerHTML = getPaidSuccessMessage(
+      paidProduct,
+      count
     );
-
-  if (!resultUrl || !internationalPhoto) {
-    statusEl.textContent =
-      'One or more photo files could not be found. Please create the photo again.';
+    updatePaidDownloadButton(count, paidProduct);
     return;
   }
 
-  const basicLink = document.createElement('a');
-  basicLink.href = resultUrl;
-  basicLink.download = 'us_visa_photo.jpg';
-  document.body.appendChild(basicLink);
-  basicLink.click();
-  basicLink.remove();
-
-  setTimeout(function () {
-    const intlLink = document.createElement('a');
-    intlLink.href = internationalPhoto;
-    intlLink.download = 'international_35x45_photo.jpg';
-    document.body.appendChild(intlLink);
-    intlLink.click();
-    intlLink.remove();
-  }, 500);
-
-} else if (paidProduct === 'professional-international') {
-  statusEl.textContent =
-    'Professional international photo is still being prepared.';
-  return;
-
-  } else {
-    statusEl.textContent =
-      'The purchased photo package could not be identified.';
-    return;
-  }
+  triggerPhotoDownloads(paidFiles);
 
   const nextCount = count + 1;
 
-  downloadBtn.dataset.downloadCount = String(nextCount);
+  setPaidDownloadCount(nextCount);
 
-  window.parent.localStorage.setItem(
-    'usvisa_download_count',
-    String(nextCount)
-  );
+  statusEl.innerHTML =
+    getPaidSuccessMessage(paidProduct, nextCount);
 
-  statusEl.textContent =
-    'Download complete. Remaining downloads: ' +
-    (5 - nextCount);
-
-  downloadBtn.textContent = 'Download HD Again';
+  updatePaidDownloadButton(nextCount, paidProduct);
   return;
 }
+
+  if (!resultUrl) {
+    statusEl.textContent = 'Please create your photo first.';
+    return;
+  }
+
+  if (!isFinalJpegPhoto(getCleanPhotoForDownload())) {
+    statusEl.textContent =
+      'The clean JPG is still preparing. Please create your photo again.';
+    updateBasicPackageButton();
+    setDownloadEnabled(false);
+    return;
+  }
 
   setDownloadEnabled(false);
   downloadBtn.textContent = 'Opening checkout...';
 
   try {
     const selectedPackage = getSelectedBasicPackage();
+    const checkoutProduct =
+      selectedPackage === 'visa-plus-international'
+        ? 'basic-international'
+        : 'basic';
+
+if (
+  selectedPackage === 'visa-plus-international' &&
+  !isFinalJpegPhoto(
+    readStoredPhoto('usvisa_pending_international_photo')
+  )
+) {
+  statusEl.textContent =
+    'The international 3.5 × 4.5 cm JPG is still preparing. Please try again shortly.';
+  updateBasicPackageButton();
+  setDownloadEnabled(true);
+  return;
+}
+
+beginCheckoutForProduct(checkoutProduct);
 
 const response = await fetch('/api/create-paypal-order', {
   method: 'POST',
@@ -2703,21 +3732,33 @@ const response = await fetch('/api/create-paypal-order', {
 });
     const data = await response.json();
     if (!data.url) throw new Error('No checkout URL');
+
+    if (!rememberPendingPayment(checkoutProduct, data.url)) {
+      throw new Error('Checkout could not be linked to this photo.');
+    }
+
     window.parent.location.href = data.url;
-  } catch (error) {
-    console.error(error);
-    statusEl.textContent = 'Payment page failed to open. Please try again.';
-    updateBasicPackageButton();
-    setDownloadEnabled(true);
-  }
+ } catch (error) {
+  console.error(error);
+  statusEl.textContent = 'Payment page failed to open. Please try again.';
+  updateBasicPackageButton();
+  setDownloadEnabled(true);
+} finally {
+  createPhotoBusy = false;
+}
 });
 function restoreProfessionalPreviewIfAvailable() {
   const savedProfessionalPreview =
-window.parent.localStorage.getItem(
-"usvisa_pending_professional_photo"
-);
+    readStoredPhoto('usvisa_pending_professional_photo');
 
-  if (!savedProfessionalPreview || !retouchImage || !retouchPreview) return;
+  if (
+    !savedProfessionalPreview ||
+    !isStoredProfessionalForCurrentPhoto() ||
+    !retouchImage ||
+    !retouchPreview
+  ) {
+    return;
+  }
 
   retouchImage.src = savedProfessionalPreview;
   retouchPreview.style.display = "block";
@@ -2731,10 +3772,21 @@ window.parent.localStorage.getItem(
     professionalRetouchBtn.disabled = true;
   }
 }
-function restorePaidDownloadIfAvailable() {
-  const clean = window.parent.localStorage.getItem('usvisa_clean_photo');
-  const protectedPreview = window.parent.localStorage.getItem('usvisa_protected_preview');
-  if (!clean && !protectedPreview) return;
+function restorePaidDownloadIfAvailable(restoreMessage) {
+  const clean = readStoredPhoto('usvisa_clean_photo');
+  const protectedPreview = readStoredPhoto('usvisa_protected_preview');
+  if (!clean && !protectedPreview) return false;
+
+  if (
+    currentPhotoFingerprint &&
+    (
+      !isCreatedPhotoForFingerprint(currentPhotoFingerprint) ||
+      !areCreatedPhotoFilesForCurrentPhoto()
+    )
+  ) {
+    clearPaymentState();
+    return false;
+  }
 
   const img = new Image();
   img.onload = function() {
@@ -2748,10 +3800,11 @@ function restorePaidDownloadIfAvailable() {
     downloadBtn.style.display = 'inline-flex';
 
     const savedProfessionalPreview =
-  window.parent.localStorage.getItem("usvisa_pending_professional_photo");
+  readStoredPhoto('usvisa_pending_professional_photo');
 
 if (
   savedProfessionalPreview &&
+  isStoredProfessionalForCurrentPhoto() &&
   retouchImage &&
   retouchPreview
 ) {
@@ -2767,35 +3820,61 @@ if (
   }
 }
 
-    resultUrl = clean || protectedPreview;
-    if (window.parent.location.search.includes('paid=1')) {
-    downloadBtn.textContent = '⬇ Download Photos Again';
-statusEl.innerHTML =
-  '<div style="line-height:1.7">' +
-  '<b>✅ Payment Successful!</b><br><br>' +
-  '✓ HD U.S. Visa Photo Ready<br>' +
-  '✓ Professional Retouch Ready<br><br>' +
-  'You can download your files up to <b>5 times</b>.' +
-  '</div>';
+    resultUrl = clean || '';
+    if (hasValidPaidReturn()) {
+    const paidProduct = getCurrentPaidProduct();
+    const downloadCount = getPaidDownloadCount();
+    updatePaidDownloadButton(downloadCount, paidProduct);
+    statusEl.innerHTML =
+      getPaidSuccessMessage(
+        paidProduct,
+        downloadCount
+      );
+
+    clearPaymentReturnParams();
+
+    if (
+      hasAllPaidDownloadFiles(paidProduct) &&
+      getRemainingPaidDownloads(downloadCount) > 0 &&
+      !hasAutoDownloadedForCurrentPaidReturn()
+    ) {
+      markAutoDownloadedForCurrentPaidReturn();
+      setTimeout(function () {
+        downloadBtn.click();
+      }, 250);
+    }
 } else {
    updateBasicPackageButton();
     statusEl.textContent =
+        restoreMessage ||
         'Preview restored. Unlock download to receive the clean photo.';
-}
     setDownloadEnabled(true);
+}
   };
-  img.src = window.parent.location.search.includes('paid=1') && clean ? clean : protectedPreview;
+  img.src = hasValidPaidReturn() && clean ? clean : protectedPreview;
+  return true;
 }
 
 setCreateEnabled(false);
 setDownloadEnabled(false);
 
-if (window.parent.location.search.includes('paid=1')) {
+const paymentInterruption = getPaymentInterruptionFromUrl();
+
+if (paymentInterruption) {
+  clearInterruptedPaymentState();
+
+  if (
+    !restorePaidDownloadIfAvailable(paymentInterruption.message) &&
+    statusEl
+  ) {
+    statusEl.textContent = paymentInterruption.message;
+    updateBasicPackageButton();
+  }
+} else if (hasValidPaidReturn()) {
   restorePaidDownloadIfAvailable();
-}
-  if (window.parent.location.search.includes('paid=1')) {
-    setTimeout(() => {
-        downloadBtn.click();
-    }, 500);
+} else if (
+  new URLSearchParams(window.parent.location.search).get('paid') === '1'
+) {
+  clearPaymentReturnParams();
 }
 `;

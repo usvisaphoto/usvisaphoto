@@ -1,15 +1,16 @@
+import Link from "next/link";
 import { uploadBoxHtmlV2 } from "@/components/uploadBoxV2";
 
 export default function HeroUploadSection() {
   return (
     <section className="mx-auto flex max-w-7xl flex-col px-8 pt-6 pb-4">
       <header className="mb-6 flex items-center">
-        <a href="/" className="flex items-center gap-3">
+        <Link href="/" className="flex items-center gap-3">
           <div className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-lg font-extrabold text-blue-950">
             US
           </div>
           <div className="text-xl font-extrabold">USVisaPhoto</div>
-        </a>
+        </Link>
 
        </header>
 

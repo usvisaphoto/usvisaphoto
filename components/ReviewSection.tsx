@@ -51,7 +51,7 @@ export default function ReviewSection() {
             <div className="text-yellow-300 text-xl">★★★★★</div>
 
             <p className="mt-5 text-white">
-              "{r.text}"
+              &quot;{r.text}&quot;
             </p>
 
             <div className="mt-6 flex justify-between">

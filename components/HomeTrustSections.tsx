@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function HomeTrustSections() {
   const trustItems = [
   [
@@ -38,7 +40,7 @@ export default function HomeTrustSections() {
 <p className="mx-auto mt-4 max-w-2xl text-blue-100">
   Upload one photo.
   <br />
-  We'll handle the rest.
+  We&apos;ll handle the rest.
 </p>
       </div>
 
@@ -75,9 +77,9 @@ export default function HomeTrustSections() {
             <li>✓ No permanent photo storage</li>
             <li>✓ Manual review available by email</li>
           </ul>
-          <a href="/why-us" className="mt-6 inline-block rounded-full bg-white px-5 py-3 font-bold text-blue-950">
+          <Link href="/why-us" className="mt-6 inline-block rounded-full bg-white px-5 py-3 font-bold text-blue-950">
             Learn More
-          </a>
+          </Link>
         </div>
 
         <div className="rounded-3xl border border-white/15 bg-white/10 p-7 text-white">
@@ -90,9 +92,9 @@ export default function HomeTrustSections() {
               </div>
             ))}
           </div>
-          <a href="/faq" className="mt-6 inline-block rounded-full bg-white px-5 py-3 font-bold text-blue-950">
+          <Link href="/faq" className="mt-6 inline-block rounded-full bg-white px-5 py-3 font-bold text-blue-950">
             View FAQ
-          </a>
+          </Link>
         </div>
       </div>
     </section>

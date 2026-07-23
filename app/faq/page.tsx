@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 const faqs = [
   {
     q: "Are my photos permanently stored?",
@@ -29,9 +31,9 @@ export default function FAQPage() {
   return (
     <main className="min-h-screen bg-gradient-to-br from-blue-950 via-blue-900 to-slate-950 px-6 py-16 text-white">
       <div className="mx-auto max-w-4xl rounded-3xl bg-white p-10 text-slate-800 shadow-2xl">
-        <a href="/" className="mb-8 inline-block text-sm font-semibold text-blue-700 hover:underline">
+        <Link href="/" className="mb-8 inline-block text-sm font-semibold text-blue-700 hover:underline">
           ← Back to Home
-        </a>
+        </Link>
 
         <h1 className="text-4xl font-extrabold text-blue-950">FAQ</h1>
         <p className="mt-4 text-lg text-slate-600">

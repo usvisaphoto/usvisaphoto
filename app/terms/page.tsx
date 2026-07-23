@@ -1,13 +1,15 @@
+import Link from "next/link";
+
 export default function TermsPage() {
   return (
     <main className="min-h-screen bg-gradient-to-br from-blue-950 via-blue-900 to-slate-950 text-white px-6 py-16">
       <div className="mx-auto max-w-4xl rounded-3xl bg-white p-10 text-slate-800 shadow-2xl">
-        <a
+        <Link
           href="/"
           className="mb-8 inline-block text-sm font-semibold text-blue-700 hover:underline"
         >
           ← Back to Home
-        </a>
+        </Link>
 
         <h1 className="mb-3 text-4xl font-extrabold text-blue-950">
           Terms of Service

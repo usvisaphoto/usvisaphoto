@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function Footer() {
   return (
     <footer className="border-t border-white/10 bg-[#07152d] text-white">
@@ -63,39 +65,39 @@ export default function Footer() {
             <ul className="space-y-4 text-blue-100">
 
               <li>
-                <a href="/privacy" className="hover:text-white transition">
+                <Link href="/privacy" className="hover:text-white transition">
                   Privacy Policy
-                </a>
+                </Link>
               </li>
 
               <li>
-                <a href="/refund" className="hover:text-white transition">
+                <Link href="/refund" className="hover:text-white transition">
                   Refund Policy
-                </a>
+                </Link>
               </li>
 
               <li>
-                <a href="/terms" className="hover:text-white transition">
+                <Link href="/terms" className="hover:text-white transition">
                   Terms of Service
-                </a>
+                </Link>
               </li>
             
               <li>
-               <a href="/why-us" className="hover:text-white transition">
+               <Link href="/why-us" className="hover:text-white transition">
                   Why Choose Us
-              </a>
+              </Link>
               </li>
 
               <li>
-                <a href="/contact" className="hover:text-white transition">
+                <Link href="/contact" className="hover:text-white transition">
                   Contact
-                </a>
+                </Link>
               </li>
 
               <li>
-                <a href="/faq" className="hover:text-white transition">
+                <Link href="/faq" className="hover:text-white transition">
                   FAQ
-                </a>
+                </Link>
               </li>
             </ul>
 

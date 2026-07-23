@@ -13,7 +13,7 @@ export default function GuaranteeSection() {
 
         <p className="mx-auto mt-4 max-w-2xl text-lg text-blue-100">
           Every photo is prepared to meet official U.S. visa and passport
-          requirements. If your photo needs adjustment, we'll help you fix it.
+          requirements. If your photo needs adjustment, we&apos;ll help you fix it.
         </p>
 
         <div className="mt-8 grid gap-4 md:grid-cols-3">
