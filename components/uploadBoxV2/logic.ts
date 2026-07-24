@@ -467,6 +467,7 @@ if (currentPhotoFingerprint) {
 }
 
 function showValidationReady() {
+setBasicPhotoSectionVisible(true);
   if (validationCard) {
     validationCard.style.display = 'block';
     validationCard.className = 'validation-card validation-success';
@@ -519,12 +520,45 @@ function showValidationReady() {
   statusEl.innerHTML =
     '✅ Auto detection completed.<br>Please review the validation report before creating your photo.';
 }
+function setBasicPhotoSectionVisible(visible) {
+  const display = visible ? "" : "none";
+
+  const resultTitle = document.querySelector(".result-title");
+  const resultSubtitle = document.querySelector(".result-subtitle");
+  const resultCanvasWrap = document.querySelector(".result-canvas-wrap");
+  const photoTypeCard = document.getElementById("photo-type-card");
+  const basicDownloadBtn = document.getElementById("download-btn");
+  const tempDownloadButton = document.getElementById("temp-download-btn");
+
+  if (resultTitle) resultTitle.style.display = display;
+  if (resultSubtitle) resultSubtitle.style.display = display;
+  if (resultCanvasWrap) resultCanvasWrap.style.display = display;
+  if (photoTypeCard) photoTypeCard.style.display = display;
+  if (basicDownloadBtn) basicDownloadBtn.style.display = display;
+  if (tempDownloadButton) tempDownloadButton.style.display = display;
+}
 
 function getCurrentImage() {
   return bgRemovedImg || uploadedImg;
 }
 
 function showValidationRecoverable(message) {
+  const createBtn = document.getElementById("create-photo-btn");
+
+  if (resultPanel) {
+    resultPanel.style.display = "block";
+  }
+
+  setBasicPhotoSectionVisible(false);
+
+if (professionalCard) {
+  professionalCard.style.display = "block";
+}
+
+if (expertCard) {
+  expertCard.style.display = "block";
+}
+
   if (validationCard) {
     validationCard.style.display = 'block';
     validationCard.className =
@@ -547,9 +581,42 @@ function showValidationRecoverable(message) {
         '✓ Professional Retouch can automatically reconstruct ' +
         'missing shoulders and upper body.' +
       '</div>';
-  }
+if (detectBtn) {
+  detectBtn.disabled = false;
+  detectBtn.textContent = "2. Professional Retouch · $9.99";
+  detectBtn.style.background = "#f59e0b";
+  detectBtn.style.color = "#ffffff";
+  detectBtn.style.cursor = "pointer";
+
+  detectBtn.onclick = function (event) {
+    event.preventDefault();
+
+    if (!premiumCreateBtn) {
+      console.error("Professional Retouch button was not found.");
+      return;
+    }
+
+    if (!professionalRetouchBtn) {
+  console.error("Professional Retouch preview button was not found.");
+  return;
 }
 
+professionalCard.scrollIntoView({
+  behavior: "smooth",
+  block: "center"
+});
+
+setTimeout(() => {
+  professionalRetouchBtn.click();
+}, 400);
+  };
+}
+
+if (createBtn) {
+  createBtn.style.display = "none";
+}
+  }
+  } 
 function restoreStoredAutoDetectResult() {
   const storedAutoDetect =
     getStoredAutoDetectResult(currentPhotoFingerprint);
@@ -1841,6 +1908,8 @@ pctx.restore();
   });
 }
 function resetForNewUpload() {
+  setBasicPhotoSectionVisible(true);
+
 professionalPreviewLocked = false;
 autoDetectLocked = false;
 
@@ -1884,7 +1953,8 @@ autoDetectLocked = false;
 
   if (retouchPreview) {
     retouchPreview.style.display = 'none';
-  }
+    retouchPreview.classList.remove('is-visible');
+}
 
   if (professionalCard) {
     professionalCard.style.display = 'none';
@@ -2119,17 +2189,25 @@ function validateDetectedPhoto(lm, iw, ih, sourceImage) {
       return false;
     }
 
-    if (validation.failureReason === 'upperBodyTight') {
-      showValidationError(
-        'Photo is too close.<br>Please upload a photo taken from farther away, showing both shoulders and upper body.'
-      );
-      return false;
-    }
+    if (
+  validation.failureReason === 'upperBodyTight' ||
+  validation.failureReason === 'professionalRecoverable' ||
+  validation.failureReason === 'alreadyCropped'
+) {
+  setDetectButtonState('warning');
 
-    showValidationError(
-      'This looks like an already-cropped ID/passport photo.<br>Please upload the original photo taken from farther away, with shoulders visible.'
-    );
-    return false;
+  showValidationRecoverable(
+    'This photo is cropped too tightly for Basic Photo creation.<br><br>' +
+    'Professional Retouch can extend the clothing and shoulder area automatically.'
+  );
+
+  return false;
+}
+
+showValidationError(
+  'This photo requires manual review.<br>Please use Expert Manual Editing.'
+);
+return false;
   }
 
   window.usvisaLastValidationReport = {
@@ -2362,9 +2440,13 @@ if (poseRecoverable) {
 const validation = validateDetectedPhoto(lm, iw, ih, img);
 if (!validation) return;
 
+if (poseRecoverable && validation.pass) {
+    validation.pass = false;
+    validation.failureReason = "professionalRecoverable";
+}
+
 lockedDetection = {
   landmarks: lm,
-
   iw,
   ih,
 
@@ -3164,7 +3246,8 @@ if (retouchImage) {
 }
 
 if (retouchPreview) {
-  retouchPreview.style.display = 'none';
+    retouchPreview.style.display = 'none';
+    retouchPreview.classList.remove('is-visible');
 }
 
 if (professionalRetouchBtn) {
@@ -3311,14 +3394,13 @@ downloadBtn.style.display = 'inline-flex';
 });
 
 function getProfessionalPreviewDailyKey() {
-  const today = new Date();
+  const fingerprint =
+    currentPhotoFingerprint || "photo-not-ready";
 
-  const year = today.getFullYear();
-  const month = String(today.getMonth() + 1).padStart(2, '0');
-  const day = String(today.getDate()).padStart(2, '0');
-
-  return 'usvisa_professional_preview_used_' +
-    year + '-' + month + '-' + day;
+  return (
+    "usvisa_professional_preview_used_" +
+    fingerprint
+  );
 }
 
 function hasUsedProfessionalPreviewToday() {
@@ -3354,13 +3436,13 @@ function applyProfessionalPreviewDailyState() {
         '</span>';
     } else {
       professionalRetouchBtn.disabled = true;
-      professionalRetouchBtn.innerHTML =
-        '<span class="professional-preview-button-title">' +
-        'Daily Preview Already Used' +
-        '</span>' +
-        '<span class="professional-preview-button-note">' +
-        'Available again tomorrow' +
-        '</span>';
+   professionalRetouchBtn.innerHTML =
+    '<span class="professional-preview-button-title">' +
+    'Preview Already Used for This Photo' +
+    '</span>' +
+    '<span class="professional-preview-button-note">' +
+    'Upload a different photo to preview again' +
+    '</span>';
     }
 
     return;
@@ -3400,9 +3482,9 @@ if (professionalRetouchBtn) {
       retouchImage.style.display = 'block';
     }
 
-    if (retouchPreview) {
-      retouchPreview.style.display = 'block';
-    }
+ if (retouchPreview) {
+  retouchPreview.classList.add('is-visible');
+}
 
     if (premiumCreateBtn) {
       premiumCreateBtn.style.display = 'block';
@@ -3525,27 +3607,44 @@ writeStoredPhoto(
   professionalInternationalPhoto
 );
 
-if (retouchImage) {
-  retouchImage.src = protectedProfessionalPreview;
+if (!retouchImage) {
+  throw new Error('Professional preview image element was not found.');
+}
+
+await new Promise(function (resolve, reject) {
+  retouchImage.onload = function () {
+    retouchImage.style.display = 'block';
+    resolve(true);
+  };
+
+  retouchImage.onerror = function () {
+    reject(
+      new Error('Professional preview image could not be displayed.')
+    );
+  };
+
   retouchImage.setAttribute('draggable', 'false');
+
   retouchImage.oncontextmenu = function (e) {
     e.preventDefault();
     return false;
   };
-retouchImage.ondragstart = function (e) {
-  e.preventDefault();
-  return false;
-};
 
-retouchImage.onclick = function (e) {
-  e.preventDefault();
-  return false;
-};
+  retouchImage.ondragstart = function (e) {
+    e.preventDefault();
+    return false;
+  };
 
-}
+  retouchImage.onclick = function (e) {
+    e.preventDefault();
+    return false;
+  };
+
+  retouchImage.src = protectedProfessionalPreview;
+});
 
 if (retouchPreview) {
-  retouchPreview.style.display = 'block';
+  retouchPreview.classList.add('is-visible');
 }
   if (premiumCreateBtn) {
   const withInternational =

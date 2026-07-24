@@ -4,6 +4,7 @@ function evaluateDetectedPhoto(lm, iw, ih, sourceImage) {
   const mouthResult = detectMouth(lm);
   const headMetrics = getHeadMetrics(lm, iw, ih);
   const faceDirection = detectFaceDirection(lm);
+  const appearance =  validateAppearance(sourceImage, lm, iw, ih);
 
   const foreheadY = headMetrics.foreheadY;
   const chinY = headMetrics.chinY;
@@ -27,14 +28,14 @@ function evaluateDetectedPhoto(lm, iw, ih, sourceImage) {
   const lowerBodyRoomRatio = (ih - chinY) / headHeightPx;
   const shoulderRoomRatio = bottomSpaceRatio;
 
-  const headTooLargeForSource = crownToChinRatio > 0.52;
-  const upperBodyTooClose = lowerBodyRoomRatio < 1.15;
-  const shouldersLikelyCropped = shoulderRoomRatio < 0.30;
+ const headTooLargeForSource = crownToChinRatio > 0.72;
+const upperBodyTooClose = lowerBodyRoomRatio < 0.30;
+const shouldersLikelyCropped = shoulderRoomRatio < 0.16;
 
-  const upperBodyHardFail =
-    headTooLargeForSource ||
-    shouldersLikelyCropped ||
-    (upperBodyTooClose && shoulderRoomRatio < 0.38);
+const upperBodyHardFail =
+  shouldersLikelyCropped ||
+  (headTooLargeForSource && upperBodyTooClose);
+
 
   const yawRatio = faceDirection.yawRatio;
   const faceNotStraight = faceDirection.faceNotStraight;
@@ -83,25 +84,26 @@ function evaluateDetectedPhoto(lm, iw, ih, sourceImage) {
     sideFace && faceNotStraight;
 
   const shoulderLikelyCropped =
-    crownToChinRatio > 0.46 &&
-    bottomSpaceRatio < 0.34 &&
-    validationScore < 90;
+  crownToChinRatio > 0.68 &&
+  bottomSpaceRatio < 0.14;
 
-  const tightIdPhotoCrop =
-    (crownToChinRatio > 0.52 && bottomSpaceRatio < 0.24) ||
-    (crownToChinRatio > 0.62 && bottomSpaceRatio < 0.32) ||
-    crownToChinRatio > 0.70;
+const tightIdPhotoCrop =
+  crownToChinRatio > 0.74 ||
+  (
+    crownToChinRatio > 0.68 &&
+    bottomSpaceRatio < 0.16 &&
+    lowerBodyRoomRatio < 0.28
+  );
 
-  const compositionHardFail =
-    tightIdPhotoCrop || shoulderLikelyCropped;
+const compositionHardFail =
+  tightIdPhotoCrop ||
+  shoulderLikelyCropped;
 
-  const alreadyCropped =
-    hatLikelyDetected ||
-    directionHardFail ||
-    compositionHardFail ||
-    shouldersLikelyCropped ||
-    upperBodyHardFail;
-
+const alreadyCropped =
+  compositionHardFail ||
+  shouldersLikelyCropped ||
+  upperBodyHardFail;
+  
   let score = validationScore;
 
   if (window.usvisaPhotoDateWarning) {
@@ -123,8 +125,8 @@ function evaluateDetectedPhoto(lm, iw, ih, sourceImage) {
   } else if (upperBodyHardFail) {
     failureReason = 'upperBodyTight';
   } else if (alreadyCropped) {
-    failureReason = 'alreadyCropped';
-  }
+    failureReason = 'professionalRecoverable';
+}
 
   console.log({
     crownToChinRatio,
@@ -138,17 +140,22 @@ function evaluateDetectedPhoto(lm, iw, ih, sourceImage) {
   console.log("========== PHOTO DEBUG ==========");
 
   console.table({
-    validationScore,
-    headSizeOk,
-    bottomSpaceOk,
-    upperBodyTooTight: upperBodyHardFail,
-    sideFace,
-    faceNotStraight,
-    hatLikelyDetected,
-    alreadyCropped,
-    crownToChinRatio,
-    bottomSpaceRatio
-  });
+  validationScore,
+  headSizeOk,
+  bottomSpaceOk,
+  upperBodyTooTight: upperBodyHardFail,
+  sideFace,
+  faceNotStraight,
+  hatLikelyDetected,
+  alreadyCropped,
+  crownToChinRatio,
+  bottomSpaceRatio,
+  lowerBodyRoomRatio,
+  shoulderRoomRatio,
+  headTooLargeForSource,
+  upperBodyTooClose,
+  shouldersLikelyCropped
+});
 
   return {
     pass: !failureReason,

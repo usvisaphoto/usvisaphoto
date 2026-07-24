@@ -343,7 +343,6 @@ button{flex:1;border:0;border-radius:14px;padding:13px 10px;font-size:14px;font-
 /* ===== Professional Retouch ===== */ 
 
 .professional-retouch-card{
-  display:none;  
   margin-top:14px;
   padding:16px;
   border-radius:18px;
@@ -426,6 +425,25 @@ button{flex:1;border:0;border-radius:14px;padding:13px 10px;font-size:14px;font-
   border-radius:16px;
   border:1px solid #facc15;
   background:#fffdf5;
+  opacity:0;
+  transform:translateY(10px);
+}
+
+.retouch-preview.is-visible{
+  display:block;
+  animation:retouchPreviewFadeIn 0.45s ease forwards;
+}
+
+@keyframes retouchPreviewFadeIn{
+  from{
+    opacity:0;
+    transform:translateY(10px);
+  }
+
+  to{
+    opacity:1;
+    transform:translateY(0);
+  }
 }
 
 .retouch-title{
