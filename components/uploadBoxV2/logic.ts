@@ -339,7 +339,63 @@ function hasLockedDetectionForCurrentPhoto() {
     return true;
   }
 
+  if (!lockedDetectionFingerprint) {
+    lockedDetectionFingerprint = currentPhotoFingerprint;
+    return true;
+  }
+
   return lockedDetectionFingerprint === currentPhotoFingerprint;
+}
+
+function ensureCreateReadyForCurrentPhoto() {
+  if (
+    lockedDetection &&
+    Number.isFinite(lockedDetection.crownY) &&
+    Number.isFinite(lockedDetection.chinY) &&
+    lockedDetection.chinY > lockedDetection.crownY
+  ) {
+    photoValidationPassed = true;
+    if (currentPhotoFingerprint && !lockedDetectionFingerprint) {
+      lockedDetectionFingerprint = currentPhotoFingerprint;
+    }
+    return true;
+  }
+
+  if (!photoValidationPassed || !lockedDetection) {
+    return false;
+  }
+
+  if (!currentPhotoFingerprint) {
+    return true;
+  }
+
+  if (!lockedDetectionFingerprint) {
+    lockedDetectionFingerprint = currentPhotoFingerprint;
+    return true;
+  }
+
+  if (lockedDetectionFingerprint === currentPhotoFingerprint) {
+    return true;
+  }
+
+  const storedAutoDetect =
+    getStoredAutoDetectResult(currentPhotoFingerprint);
+
+  if (
+    storedAutoDetect &&
+    storedAutoDetect.status === 'pass' &&
+    storedAutoDetect.detection
+  ) {
+    lockedDetection = storedAutoDetect.detection;
+    lockedDetectionFingerprint = currentPhotoFingerprint;
+    faceTiltAngle = lockedDetection.faceTiltAngle || 0;
+    window.usvisaLastValidationReport =
+      storedAutoDetect.report || null;
+    setCreateEnabled(true);
+    return true;
+  }
+
+  return false;
 }
 
 function showCreatePhotoButton() {
@@ -419,6 +475,14 @@ function showValidationReady() {
   showCreatePhotoButton();
   setCreateEnabled(true);
   setDetectButtonState('success');
+  setTimeout(function () {
+    showCreatePhotoButton();
+    setCreateEnabled(true);
+  }, 0);
+  setTimeout(function () {
+    showCreatePhotoButton();
+    setCreateEnabled(true);
+  }, 250);
 
   const report = window.usvisaLastValidationReport || {
     score: 98,
@@ -430,7 +494,7 @@ function showValidationReady() {
   if (checkFace) checkFace.textContent = '🟢 Face detected';
   if (checkEyes) checkEyes.textContent = '🟢 Eyes open';
   if (checkMouth) checkMouth.textContent = '🟢 Mouth closed';
-  if (checkGlasses) checkGlasses.textContent = '🟢 No glasses detected';
+  if (checkGlasses) checkGlasses.textContent = '⚪ Glasses check pending';
   if (checkPosition) checkPosition.textContent = '🟢 ' + report.originalText;
 
   if (validationFinal) {
@@ -504,7 +568,8 @@ function restoreStoredAutoDetectResult() {
     window.usvisaLastValidationReport =
       storedAutoDetect.report || null;
 
-    photoValidationPassed = true;
+    showCreatePhotoButton();
+    setCreateEnabled(true);
     autoDetectLocked = true;
     showValidationReady();
 
@@ -1995,7 +2060,7 @@ function validateDetectedPhoto(lm, iw, ih) {
 
   if (checkFace) checkFace.textContent = '🟢 Face detected';
 
-  const validation = evaluateDetectedPhoto(lm, iw, ih);
+  const validation = evaluateDetectedPhoto(lm, iw, ih, img);
   const eyesClosed = validation.eyeResult.eyesClosed;
   const mouthOpenDetected = validation.mouthResult.mouthOpened;
 
@@ -2007,16 +2072,19 @@ function validateDetectedPhoto(lm, iw, ih) {
     checkMouth.textContent = mouthOpenDetected ? '🔴 Mouth should be closed' : '🟢 Mouth closed';
   }
 
-  if (checkGlasses) {
-    checkGlasses.textContent = '🟢 No glasses detected';
-  }
+ if (checkGlasses) {
+  checkGlasses.textContent = '⚪ Glasses check pending';
+}
 
   if (checkPosition) {
-    checkPosition.textContent = validation.pass
-      ? '🟢 Head position and hat check passed'
-      : '🔴 Head position / hat check failed';
-  }
+  const positionFailed =
+    validation.failureReason === 'hat' ||
+    validation.failureReason === 'direction';
 
+  checkPosition.textContent = positionFailed
+    ? '🔴 Head position / hat check failed'
+    : '🟢 Head position and hat check passed';
+}
   if (!validation.pass) {
     if (validation.failureReason === 'eyesClosed') {
       showValidationError(
@@ -2359,7 +2427,8 @@ if (poseRecoverable) {
 crownLine.style.display = 'none';
 chinLine.style.display = 'none';
 
-photoValidationPassed = true;  
+showCreatePhotoButton();
+setCreateEnabled(true);
 setDetectButtonState('success');
 saveAutoDetectPass(
   currentPhotoFingerprint,
@@ -3052,8 +3121,13 @@ if (
   photoState.fingerprint === currentPhotoFingerprint &&
   photoState.created === true
 ) {
-  restorePreviouslyCreatedPhoto();
-  return;
+  const restored = restorePreviouslyCreatedPhoto();
+  if (restored) {
+    return;
+  }
+  // Restore failed (e.g. cached preview data was evicted from
+  // localStorage while the small "created" flag survived).
+  // Fall through and create the photo fresh instead of doing nothing.
 }
 
   if (!uploadedImg || !uploadedFile) {
@@ -3061,11 +3135,10 @@ if (
     return;
   }
 
-  if (!photoValidationPassed || !hasLockedDetectionForCurrentPhoto()) {
-    statusEl.textContent = 'Please click Auto Detect before creating your photo.';
+  if (!ensureCreateReadyForCurrentPhoto()) {
+    statusEl.textContent =
+      'Create is blocked because Auto Detect PASS was not saved. Please click Auto Detect again.';
     setCreateEnabled(false);
-    lockedDetection = null;
-    lockedDetectionFingerprint = '';
     return;
   }
 
@@ -3093,7 +3166,17 @@ if (professionalRetouchBtn) {
   applyProfessionalPreviewDailyState();
 }
 if (!bgRemovedImg) {
-      bgRemovedImg = await removeBackgroundWithPhotoRoom();
+      try {
+        bgRemovedImg = await removeBackgroundWithPhotoRoom();
+      } catch (backgroundError) {
+        console.error(
+          'BACKGROUND REMOVAL ERROR:',
+          backgroundError
+        );
+        statusEl.textContent =
+          'Create clicked, but background removal failed. Using the original photo for preview.';
+        bgRemovedImg = uploadedImg;
+      }
     }
 
     const rawCleanUrl = drawFinalPhoto(bgRemovedImg);

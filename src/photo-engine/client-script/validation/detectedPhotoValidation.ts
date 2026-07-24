@@ -1,5 +1,5 @@
 export const detectedPhotoValidationScript = String.raw`
-function evaluateDetectedPhoto(lm, iw, ih) {
+function evaluateDetectedPhoto(lm, iw, ih, sourceImage) {
   const eyeResult = detectEyes(lm);
   const mouthResult = detectMouth(lm);
   const headMetrics = getHeadMetrics(lm, iw, ih);

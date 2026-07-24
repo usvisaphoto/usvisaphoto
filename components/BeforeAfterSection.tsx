@@ -61,7 +61,7 @@ export default function BeforeAfterSection() {
               </span>
             </div>
 
-           <div className="aspect-[4/5] overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
+           <div className="aspect-square overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
      <img src="/demo/after.jpg" alt="Embassy-ready processed photo" className="h-full w-full object-cover" />
      </div>
             <div className="mt-6 grid grid-cols-2 gap-3 text-sm text-slate-700">

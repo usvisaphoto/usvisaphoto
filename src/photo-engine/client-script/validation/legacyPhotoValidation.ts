@@ -45,7 +45,7 @@ function runPhotoValidation(landmarks, iw, ih) {
   }
 
   checkGlasses.textContent =
-    '✅ No obvious glasses detected';
+  '⚪ Glasses check pending';
 
   checkPosition.textContent =
     '✅ Head position detected';

@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function GuaranteeSection() {
   return (
     <section className="mx-auto mt-14 max-w-6xl px-6">
@@ -8,12 +10,23 @@ export default function GuaranteeSection() {
         </div>
 
         <h2 className="mt-4 text-3xl font-extrabold text-white">
-          Photo Acceptance Guarantee
+          Built to Official Photo Standards
         </h2>
 
         <p className="mx-auto mt-4 max-w-2xl text-lg text-blue-100">
-          Every photo is prepared to meet official U.S. visa and passport
-          requirements. If your photo needs adjustment, we&apos;ll help you fix it.
+          Every photo is automatically checked against official U.S. visa and
+          passport size and formatting requirements before you pay anything.
+          You always see your preview first &mdash; you only pay to unlock
+          the final high-quality download.
+        </p>
+
+        <p className="mx-auto mt-3 max-w-2xl text-sm text-blue-200">
+          Something look off after purchase? Contact us within 7 days &mdash;
+          see our{" "}
+          <Link href="/refund" className="font-bold text-white underline underline-offset-2">
+            Refund Policy
+          </Link>{" "}
+          for details.
         </p>
 
         <div className="mt-8 grid gap-4 md:grid-cols-3">

@@ -43,6 +43,10 @@ export default function HeroUploadSection() {
             Upload Your Photo
           </a>
 
+          <p className="mt-3 text-sm text-blue-200">
+            Starting at <span className="font-bold text-white">$4.99</span> · Pay only after you preview your photo
+          </p>
+
           <div className="mt-8 grid max-w-xl grid-cols-4 gap-3">
             {["US", "KR", "JP", "CN", "CA", "IN", "VN", "Other"].map((item) => (
               <button
@@ -73,8 +77,13 @@ export default function HeroUploadSection() {
                   </div>
                 </div>
 
-                <div className="rounded-full bg-blue-100 px-3 py-1 text-xs font-bold text-blue-900">
-                  US 2x2
+                <div className="flex flex-col items-end gap-1">
+                  <div className="rounded-full bg-blue-100 px-3 py-1 text-xs font-bold text-blue-900">
+                    US 2x2
+                  </div>
+                  <div className="rounded-full bg-green-100 px-3 py-1 text-xs font-bold text-green-800">
+                    From $4.99
+                  </div>
                 </div>
               </div>
 
