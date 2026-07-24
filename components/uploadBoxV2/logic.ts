@@ -2052,7 +2052,7 @@ async function initFaceMesh() {
 
 
 
-function validateDetectedPhoto(lm, iw, ih) {
+function validateDetectedPhoto(lm, iw, ih, sourceImage) {
   if (validationCard) {
     validationCard.style.display = 'block';
     validationCard.className = 'validation-card';
@@ -2060,7 +2060,12 @@ function validateDetectedPhoto(lm, iw, ih) {
 
   if (checkFace) checkFace.textContent = '🟢 Face detected';
 
-  const validation = evaluateDetectedPhoto(lm, iw, ih, img);
+  const validation = evaluateDetectedPhoto(
+  lm,
+  iw,
+  ih,
+  sourceImage
+);
   const eyesClosed = validation.eyeResult.eyesClosed;
   const mouthOpenDetected = validation.mouthResult.mouthOpened;
 
@@ -2354,7 +2359,7 @@ if (poseRecoverable) {
 
     detectedLm = lm;
 
-const validation = validateDetectedPhoto(lm, iw, ih);
+const validation = validateDetectedPhoto(lm, iw, ih, img);
 if (!validation) return;
 
 lockedDetection = {
