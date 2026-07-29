@@ -619,4 +619,26 @@ button{flex:1;border:0;border-radius:14px;padding:13px 10px;font-size:14px;font-
   transform:none;
 }
 
+#admin-professional-download-btn{
+  display:none;
+  width:100%;
+  margin-top:10px;
+  padding:12px 14px;
+  border:2px dashed #374151;
+  border-radius:12px;
+  background:#ffffff;
+  color:#111827;
+  font-size:14px;
+  font-weight:900;
+  cursor:pointer;
+}
+
+#admin-professional-download-btn:hover{
+  background:#f3f4f6;
+}
+
+#admin-professional-download-btn:disabled{
+  opacity:.5;
+  cursor:not-allowed;
+}
 `;

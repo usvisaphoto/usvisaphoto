@@ -5,6 +5,7 @@ export {
   legacyPhotoValidationScript,
   mouthValidationScript,
   poseValidationScript,
-  detectedPhotoValidationScript,
+  glassesValidationScript,
   appearanceValidationScript,
+  detectedPhotoValidationScript,
 } from "./validation";

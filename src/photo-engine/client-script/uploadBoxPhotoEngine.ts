@@ -5,6 +5,8 @@ import {
   legacyPhotoValidationScript,
   mouthValidationScript,
   poseValidationScript,
+  glassesValidationScript,
+  appearanceValidationScript,
 } from "./validation";
 import { photoFingerprintScript, photoStateScript } from "./state";
 
@@ -16,5 +18,7 @@ ${faceDirectionScript}
 ${eyeValidationScript}
 ${mouthValidationScript}
 ${poseValidationScript}
+${glassesValidationScript}
+${appearanceValidationScript}
 ${detectedPhotoValidationScript}
 `;

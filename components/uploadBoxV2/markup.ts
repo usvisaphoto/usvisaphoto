@@ -250,6 +250,13 @@ export const uploadBoxMarkup = String.raw`
       <button id="premium-create-btn" type="button">
          🔓 Unlock Professional Photo · $9.99
       </button>
+<button
+  id="admin-professional-download-btn"
+  type="button"
+  style="display:none;"
+>
+  잠시 다운로드
+</button>
 
   </div>
 

@@ -16,6 +16,10 @@ const tempDownloadBtn = document.getElementById('temp-download-btn');
 const retouchPreview = document.getElementById('retouch-preview');
 const retouchImage = document.getElementById('retouch-image');
 const premiumCreateBtn = document.getElementById('premium-create-btn');
+const adminProfessionalDownloadBtn =
+  document.getElementById(
+    'admin-professional-download-btn'
+  );
 const professionalRetouchBtn = document.getElementById('professional-retouch-btn');
 const professionalInternationalCheckbox = document.getElementById('professional-international-checkbox');
 const basicPackageNote = document.getElementById('basic-package-note');
@@ -41,6 +45,127 @@ const CONFIRMED_PAYMENT_PREFIX = 'usvisa_confirmed_payment:';
 const AUTO_DOWNLOAD_PREFIX = 'usvisa_auto_downloaded:';
 const PENDING_PAYMENT_TTL_MS = 2 * 60 * 60 * 1000;
 const MAX_PAID_DOWNLOADS = 5;
+
+function isLocalAdminEnvironment() {
+  try {
+    const parentHostname = window.parent.location.hostname;
+
+    return (
+      parentHostname === "localhost" ||
+      parentHostname === "127.0.0.1"
+    );
+  } catch (error) {
+    return false;
+  }
+}
+
+function dataUrlToBlob(dataUrl) {
+  const parts = dataUrl.split(',');
+
+  if (parts.length !== 2) {
+    throw new Error('Invalid image data URL.');
+  }
+
+  const mimeMatch =
+    parts[0].match(/data:(.*?);base64/);
+
+  const mimeType =
+    mimeMatch && mimeMatch[1]
+      ? mimeMatch[1]
+      : 'image/jpeg';
+
+  const binary = atob(parts[1]);
+  const bytes = new Uint8Array(binary.length);
+
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+
+  return new Blob([bytes], {
+    type: mimeType
+  });
+}
+
+function triggerAdminFileDownload(
+  blob,
+  filename
+) {
+  const downloadUrl =
+    URL.createObjectURL(blob);
+
+  const link =
+    document.createElement('a');
+
+  link.href = downloadUrl;
+  link.download = filename;
+  link.style.display = 'none';
+
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+
+  setTimeout(function () {
+    URL.revokeObjectURL(downloadUrl);
+  }, 1000);
+}
+
+function getAdminDownloadTimestamp() {
+  const now = new Date();
+
+  const year = now.getFullYear();
+  const month =
+    String(now.getMonth() + 1).padStart(2, '0');
+  const day =
+    String(now.getDate()).padStart(2, '0');
+  const hour =
+    String(now.getHours()).padStart(2, '0');
+  const minute =
+    String(now.getMinutes()).padStart(2, '0');
+  const second =
+    String(now.getSeconds()).padStart(2, '0');
+
+  return (
+    year +
+    month +
+    day +
+    '_' +
+    hour +
+    minute +
+    second
+  );
+}
+
+function updateAdminProfessionalDownloadButton() {
+  if (!adminProfessionalDownloadBtn) {
+    return;
+  }
+
+  if (!isLocalAdminEnvironment()) {
+    adminProfessionalDownloadBtn.style.display =
+      'none';
+
+    adminProfessionalDownloadBtn.disabled = true;
+    return;
+  }
+
+  const professionalPhoto =
+    readStoredPhoto(
+      'usvisa_pending_professional_photo'
+    );
+
+  const professionalMatchesCurrentPhoto =
+    isStoredProfessionalForCurrentPhoto();
+
+  const canDownload =
+    Boolean(professionalPhoto) &&
+    professionalMatchesCurrentPhoto;
+
+  adminProfessionalDownloadBtn.style.display =
+    canDownload ? 'block' : 'none';
+
+  adminProfessionalDownloadBtn.disabled =
+    !canDownload;
+}
 
 function getSelectedBasicPackage() {
   const selected = document.querySelector(
@@ -444,10 +569,6 @@ statusEl.textContent = 'Photo validation failed. Please check the message below.
 setCreateEnabled(false);
 setDetectButtonState('deny');
 photoValidationPassed = false;
-autoDetectLocked = false;
-lockedDetection = null;
-detectedLm = null;
-lockedDetectionFingerprint = '';
 
 if (currentPhotoFingerprint) {
   saveAutoDetectDeny(
@@ -492,11 +613,17 @@ setBasicPhotoSectionVisible(true);
     originalText: 'Original photo check passed'
   };
 
-  if (checkFace) checkFace.textContent = '🟢 Face detected';
-  if (checkEyes) checkEyes.textContent = '🟢 Eyes open';
-  if (checkMouth) checkMouth.textContent = '🟢 Mouth closed';
-  if (checkGlasses) checkGlasses.textContent = '⚪ Glasses check pending';
-  if (checkPosition) checkPosition.textContent = '🟢 ' + report.originalText;
+  [
+  checkFace,
+  checkEyes,
+  checkMouth,
+  checkGlasses,
+  checkPosition
+].forEach(function (element) {
+  if (element) {
+    element.style.display = 'none';
+  }
+});
 
   if (validationFinal) {
   validationFinal.innerHTML =
@@ -1910,8 +2037,9 @@ pctx.restore();
 function resetForNewUpload() {
   setBasicPhotoSectionVisible(true);
 
-professionalPreviewLocked = false;
-autoDetectLocked = false;
+  professionalPreviewLocked = false;
+  professionalRetouchBusy = false;
+  autoDetectLocked = false;
 
   currentPhotoFingerprint = '';
   uploadedFile = null;
@@ -1927,7 +2055,7 @@ autoDetectLocked = false;
   photoValidationPassed = false;
   window.usvisaRecoverable = false;
   window.usvisaLastValidationReport = null;
-
+  window.usvisaLastValidationResult = null;
   setDetectButtonState('auto');
 
   showCreatePhotoButton();
@@ -1956,6 +2084,15 @@ autoDetectLocked = false;
     retouchPreview.classList.remove('is-visible');
 }
 
+if (adminProfessionalDownloadBtn) {
+  adminProfessionalDownloadBtn.style.display =
+    'none';
+
+  adminProfessionalDownloadBtn.disabled = true;
+  adminProfessionalDownloadBtn.textContent =
+    '잠시 다운로드';
+}
+
   if (professionalCard) {
     professionalCard.style.display = 'none';
   }
@@ -1982,9 +2119,17 @@ fileInput.addEventListener('change', async function(e) {
   uploadedFile = file;
 
   try {
-    currentPhotoFingerprint =
-      await createPhotoFingerprint(file);
-    applyProfessionalPreviewDailyState();
+  currentPhotoFingerprint =
+    await createPhotoFingerprint(file);
+
+  professionalPreviewLocked = false;
+  professionalRetouchBusy = false;
+
+  if (professionalRetouchBtn) {
+    professionalRetouchBtn.disabled = false;
+  }
+
+  applyProfessionalPreviewDailyState();
 
     const photoState = getPhotoState();
 
@@ -2130,25 +2275,71 @@ function validateDetectedPhoto(lm, iw, ih, sourceImage) {
 
   if (checkFace) checkFace.textContent = '🟢 Face detected';
 
+console.log(
+    "SOURCE IMAGE PASSED TO VALIDATION",
+    sourceImage
+);
+  
+console.log("CURRENT LM", {
+  noseX: lm[1].x,
+  noseY: lm[1].y,
+  leftEye: lm[33].x,
+  rightEye: lm[263].x,
+  imageWidth: iw,
+  imageHeight: ih
+});
+
   const validation = evaluateDetectedPhoto(
   lm,
   iw,
   ih,
   sourceImage
 );
-  const eyesClosed = validation.eyeResult.eyesClosed;
-  const mouthOpenDetected = validation.mouthResult.mouthOpened;
 
+window.usvisaLastValidationResult =
+  validation;
+
+ const eyesClosed =
+  validation.eyeResult.eyesClosed;
+
+const mouthOpenDetected =
+  Boolean(
+    validation.mouthResult.mouthOpened
+  );
+
+const teethVisibleDetected =
+  Boolean(
+    validation.mouthResult.teethVisible
+  );
+
+const mouthInvalid =
+  mouthOpenDetected ||
+  teethVisibleDetected;
+  
   if (checkEyes) {
     checkEyes.textContent = eyesClosed ? '🔴 Eyes may be closed' : '🟢 Eyes open';
   }
-
-  if (checkMouth) {
-    checkMouth.textContent = mouthOpenDetected ? '🔴 Mouth should be closed' : '🟢 Mouth closed';
+if (checkMouth) {
+  if (teethVisibleDetected) {
+    checkMouth.textContent =
+      '🔴 Teeth must not be visible';
+  } else if (mouthOpenDetected) {
+    checkMouth.textContent =
+      '🔴 Mouth should be closed';
+  } else {
+    checkMouth.textContent =
+      '🟢 Mouth closed';
   }
-
+}
  if (checkGlasses) {
-  checkGlasses.textContent = '⚪ Glasses check pending';
+  const glassesDetected =
+    validation.failureReason === 'glasses' ||
+    validation.failureReason === 'glassesAndTeeth';
+
+  checkGlasses.textContent =
+    glassesDetected
+      ? '🔴 Glasses are not allowed'
+      : '🟢 No glasses detected';
 }
 
   if (checkPosition) {
@@ -2168,12 +2359,26 @@ function validateDetectedPhoto(lm, iw, ih, sourceImage) {
       return false;
     }
 
-    if (validation.failureReason === 'mouthOpen') {
-      showValidationError(
-        '❌ Mouth should be closed.<br>Please upload a photo with a neutral expression.'
-      );
-      return false;
-    }
+    if (validation.failureReason === 'glassesAndTeeth') {
+  showValidationError(
+    '❌ Glasses are not allowed.<br>❌ Teeth must not be visible.<br>Please upload a photo without glasses and keep your mouth closed.'
+  );
+  return false;
+}
+
+if (validation.failureReason === 'glasses') {
+  showValidationError(
+    '❌ Glasses are not allowed.<br>Please upload a photo without glasses.'
+  );
+  return false;
+}
+
+   if (validation.failureReason === 'mouthOpen') {
+  showValidationError(
+    '❌ Teeth must not be visible.<br>Please keep your mouth closed with a neutral expression.'
+  );
+  return false;
+}
 
     if (validation.failureReason === 'hat') {
       showValidationError(
@@ -2245,6 +2450,7 @@ detectBtn.addEventListener('click', async function(e) {
   photoValidationPassed = false;
   window.usvisaRecoverable = false;
   window.usvisaLastValidationReport = null;
+  window.usvisaLastValidationResult = null;
   resultUrl = null;
   setDownloadEnabled(false);
   if (downloadBtn) {
@@ -2426,6 +2632,23 @@ if (poseRecoverable) {
       return;
     }
 
+/*
+ * 같은 사진의 Auto Detect가 이미 끝났다면
+ * FaceMesh 결과를 다시 적용하지 않는다.
+ */
+if (
+  autoDetectLocked &&
+  window.usvisaLastValidationResult &&
+  lockedDetection
+) {
+  console.log(
+    'Auto Detect already completed for this photo.'
+  );
+
+  return;
+}
+
+
     const lm = detected.multiFaceLandmarks[0];
 
     const leftEye = lm[33];
@@ -2455,7 +2678,9 @@ lockedDetection = {
 
   faceTiltAngle,
 
-  crownY: validation.estimatedCrownY,
+  crownY: Number.isFinite(validation.layoutCrownY)
+  ? validation.layoutCrownY
+  : validation.estimatedCrownY,
   chinY: validation.detectedChinY,
 
   foreheadY: validation.foreheadY,
@@ -2839,7 +3064,8 @@ const faceHeightIn =
  
 
 // 여기에 전체 함수 붙여넣기
-function createProfessionalAlignedPhoto(sourceImg) {
+async function createProfessionalAlignedPhoto(sourceInput) {
+
   if (!lockedDetection) {
     throw new Error(
       'No locked detection for professional alignment.'
@@ -2935,31 +3161,61 @@ function createProfessionalAlignedPhoto(sourceImg) {
   );
 }
 
-// 기존 함수가 바로 이어짐
-function createProfessionalAlignedPhoto(sourceImg) {
+async function createProfessionalAlignedPhoto(sourceInput) {
   if (!lockedDetection) {
     throw new Error(
       'No locked detection for professional alignment.'
     );
   }
 
-  const professionalCanvas =
-    document.createElement('canvas');
-
-  professionalCanvas.width = TARGET;
-  professionalCanvas.height = TARGET;
-
-  const professionalCtx =
-    professionalCanvas.getContext('2d');
-
-  if (!professionalCtx) {
+  if (
+    typeof window.createProfessionalPhotoLayout !==
+    'function'
+  ) {
     throw new Error(
-      'Professional alignment canvas context unavailable.'
+      'Professional photo layout engine is not loaded.'
     );
   }
 
-  const crownY = lockedDetection.crownY;
-  const chinY = lockedDetection.chinY;
+  let sourceImg = sourceInput;
+
+  if (typeof sourceInput === 'string') {
+    sourceImg = await new Promise(
+      function (resolve, reject) {
+        const img = new Image();
+
+        img.onload = function () {
+          resolve(img);
+        };
+
+        img.onerror = function () {
+          reject(
+            new Error(
+              'Professional source image could not be loaded.'
+            )
+          );
+        };
+
+        img.src = sourceInput;
+      }
+    );
+  }
+
+  if (
+    !sourceImg ||
+    !sourceImg.naturalWidth ||
+    !sourceImg.naturalHeight
+  ) {
+    throw new Error(
+      'Professional source image is invalid.'
+    );
+  }
+
+  const crownY =
+    Number(lockedDetection.crownY);
+
+  const chinY =
+    Number(lockedDetection.chinY);
 
   if (
     !Number.isFinite(crownY) ||
@@ -2970,13 +3226,6 @@ function createProfessionalAlignedPhoto(sourceImg) {
       'Invalid professional alignment geometry.'
     );
   }
-
-  const currentHeadPx =
-    Math.max(1, chinY - crownY);
-
-  const scale =
-    (TARGET_HEAD_PX * 0.9) /
-    currentHeadPx;
 
   const sourceWidth =
     sourceImg.naturalWidth ||
@@ -2992,81 +3241,37 @@ function createProfessionalAlignedPhoto(sourceImg) {
       sourceCenterX
     );
 
-  const maxCorrectionPx = 18;
-
-  const correctionX =
-    Math.max(
-      -maxCorrectionPx,
-      Math.min(
-        maxCorrectionPx,
-        (sourceCenterX -
-          detectedFaceCenterX) *
-          scale
+  const faceTiltAngle =
+    Number.isFinite(
+      Number(
+        lockedDetection.faceTiltAngle
       )
-    );
+    )
+      ? Number(
+          lockedDetection.faceTiltAngle
+        )
+      : 0;
 
-  professionalCtx.setTransform(
-    1,
-    0,
-    0,
-    1,
-    0,
-    0
-  );
+  return await window.createProfessionalPhotoLayout({
+    sourceInput: sourceImg,
 
-  professionalCtx.clearRect(
-    0,
-    0,
-    TARGET,
-    TARGET
-  );
+    /*
+     * Professional Preview의 기본 결과는
+     * 미국 비자 2×2 inch 규격이다.
+     *
+     * 정수리부터 턱까지 28mm로 생성된다.
+     */
+    format: 'us',
 
-  professionalCtx.fillStyle =
-    '#ffffff';
+    crownY,
+    chinY,
 
-  professionalCtx.fillRect(
-    0,
-    0,
-    TARGET,
-    TARGET
-  );
+    faceCenterX:
+      detectedFaceCenterX,
 
-  professionalCtx.save();
-
-  professionalCtx.translate(
-    TARGET / 2 + correctionX,
-    TOP_MARGIN_PX + 32
-  );
-
-  professionalCtx.rotate(
-    -lockedDetection.faceTiltAngle
-  );
-
-  professionalCtx.scale(
-    scale,
-    scale
-  );
-
-  professionalCtx.drawImage(
-    sourceImg,
-    -detectedFaceCenterX,
-    -crownY
-  );
-
-  professionalCtx.restore();
-
-  enhanceCanvas(
-    professionalCtx,
-    TARGET,
-    TARGET
-  );
-
-  return professionalCanvas.toDataURL(
-    'image/jpeg',
-    0.99
-  );
+    faceTiltAngle,
+  });
 }
-
 async function createFinalJpegWithSharp(dataUrl) {
   const blob = await fetch(dataUrl).then((res) => res.blob());
 
@@ -3097,97 +3302,119 @@ async function createFinalJpegWithSharp(dataUrl) {
 }
 
 async function createInternationalPhotoFromResult(sourceUrl) {
-  const sourceResponse = await fetch(sourceUrl);
-  const sourceBlob = await sourceResponse.blob();
-
-  const formData = new FormData();
-
-  formData.append(
-    'image',
-    new File(
-      [sourceBlob],
-      'us_visa_photo.jpg',
-      {
-        type: sourceBlob.type || 'image/jpeg'
-      }
-    )
-  );
-
-  formData.append(
-    'format',
-    'international'
-  );
-
-formData.append(
-  "foreheadY",
-  String(lockedDetection.foreheadY)
-);
-
-formData.append(
-  "chinY",
-  String(lockedDetection.chinY)
-);
-
-formData.append(
-  "faceHeight",
-  String(lockedDetection.faceHeight)
-);
-
-formData.append(
-  "imageWidth",
-  String(lockedDetection.imageWidth)
-);
-
-formData.append(
-  "imageHeight",
-  String(lockedDetection.imageHeight)
-);
-
-  const response = await fetch(
-    '/api/final-photo',
-    {
-      method: 'POST',
-      body: formData
-    }
-  );
-
-  if (!response.ok) {
-    const errorText =
-      await response.text();
-
+  if (
+    typeof window.createProfessionalPhotoLayout !==
+    'function'
+  ) {
     throw new Error(
-      errorText ||
-      'International photo generation failed.'
+      'Professional photo layout engine is not loaded.'
     );
   }
 
-  const internationalBlob =
-    await response.blob();
+  if (!sourceUrl) {
+    throw new Error(
+      'Professional source photo is unavailable.'
+    );
+  }
 
-  return await new Promise(
-    function (resolve, reject) {
-      const reader =
-        new FileReader();
+  /*
+   * sourceUrl은 이미 완성된 미국 2×2 Professional 사진이다.
+   *
+   * 미국 Professional 규격:
+   * - 캔버스: 600×600
+   * - 상단 여백: 5mm
+   * - 정수리~턱: 28mm
+   * - 실제 사진 높이: 50.8mm
+   *
+   * 이 좌표를 기준으로 국제 규격 엔진에 다시 배치한다.
+   * 가로와 세로를 따로 늘리지 않으므로 인물 비율이 유지된다.
+   */
+  const usCanvasSize = 600;
+  const usPhysicalHeightMm = 50.8;
+  const usTopMarginMm = 5;
+  const usHeadLengthMm = 28;
 
-      reader.onload =
-        function () {
-          resolve(reader.result);
-        };
+  const usCrownY =
+    usCanvasSize *
+    (
+      usTopMarginMm /
+      usPhysicalHeightMm
+    );
 
-      reader.onerror =
-        function () {
-          reject(
-            new Error(
-              'International photo could not be stored.'
-            )
-          );
-        };
+  const usHeadHeightPx =
+    usCanvasSize *
+    (
+      usHeadLengthMm /
+      usPhysicalHeightMm
+    );
 
-      reader.readAsDataURL(
-        internationalBlob
-      );
-    }
-  );
+  const usChinY =
+    usCrownY +
+    usHeadHeightPx;
+
+  return await window.createProfessionalPhotoLayout({
+    sourceInput: sourceUrl,
+
+    format: 'international',
+
+    crownY: usCrownY,
+    chinY: usChinY,
+
+    faceCenterX:
+      usCanvasSize / 2,
+
+    /*
+     * 미국 Professional 사진을 만들 때
+     * 이미 기울기 보정이 끝났으므로 0을 사용한다.
+     */
+    faceTiltAngle: 0,
+  });
+}
+async function createInternationalPhotoFromResult(sourceUrl) {
+  if (
+    typeof window.createProfessionalPhotoLayout !==
+    'function'
+  ) {
+    throw new Error(
+      'Professional photo layout engine is not loaded.'
+    );
+  }
+
+  if (!sourceUrl) {
+    throw new Error(
+      'Professional source photo is unavailable.'
+    );
+  }
+
+  const usCanvasSize = 600;
+  const usPhysicalHeightMm = 50.8;
+  const usTopMarginMm = 5;
+  const usHeadLengthMm = 28;
+
+  const usCrownY =
+    usCanvasSize *
+    (usTopMarginMm / usPhysicalHeightMm);
+
+  const usHeadHeightPx =
+    usCanvasSize *
+    (usHeadLengthMm / usPhysicalHeightMm);
+
+  const usChinY =
+    usCrownY + usHeadHeightPx;
+
+  return await window.createProfessionalPhotoLayout({
+    sourceInput: sourceUrl,
+
+    format: 'international',
+
+    crownY: usCrownY,
+    chinY: usChinY,
+
+    faceCenterX:
+      usCanvasSize / 2,
+
+    faceTiltAngle: 0,
+  });
 }
 
 let createPhotoBusy = false;
@@ -3394,11 +3621,29 @@ downloadBtn.style.display = 'inline-flex';
 });
 
 function getProfessionalPreviewDailyKey() {
-  const fingerprint =
-    currentPhotoFingerprint || "photo-not-ready";
+  const today = new Date();
+
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
 
   return (
-    "usvisa_professional_preview_used_" +
+    'usvisa_professional_preview_daily_used_' +
+    year +
+    '-' +
+    month +
+    '-' +
+    day
+  );
+}
+
+function getProfessionalPreviewCacheKey(fingerprint) {
+  if (!fingerprint) {
+    return '';
+  }
+
+  return (
+    'usvisa_professional_preview_cache_' +
     fingerprint
   );
 }
@@ -3415,8 +3660,36 @@ function markProfessionalPreviewUsedToday() {
   window.parent.localStorage.setItem(key, '1');
 }
 
+function readProfessionalPreviewForCurrentPhoto() {
+  const key =
+    getProfessionalPreviewCacheKey(currentPhotoFingerprint);
+
+  if (!key) {
+    return '';
+  }
+
+  return window.parent.localStorage.getItem(key) || '';
+}
+
+function writeProfessionalPreviewForCurrentPhoto(photo) {
+  const key =
+    getProfessionalPreviewCacheKey(currentPhotoFingerprint);
+
+  if (!key || !photo) {
+    return;
+  }
+
+  window.parent.localStorage.setItem(key, photo);
+}
+
 function applyProfessionalPreviewDailyState() {
   if (!professionalRetouchBtn) return;
+
+    if (isLocalAdminEnvironment()) {
+    professionalRetouchBtn.disabled = false;
+    updateProfessionalPackageButton();
+    return;
+  }
 
   const savedProfessionalPhoto =
     readStoredPhoto('usvisa_pending_professional_photo');
@@ -3455,6 +3728,9 @@ applyProfessionalPreviewDailyState();
 
 if (professionalRetouchBtn) {
   professionalRetouchBtn.addEventListener('click', async function (e) {
+
+  console.log('=== PROFESSIONAL BUTTON CLICKED ===');
+
   e.preventDefault();
   e.stopPropagation();
 
@@ -3482,7 +3758,8 @@ if (professionalRetouchBtn) {
       retouchImage.style.display = 'block';
     }
 
- if (retouchPreview) {
+if (retouchPreview) {
+  retouchPreview.style.removeProperty('display');
   retouchPreview.classList.add('is-visible');
 }
 
@@ -3525,11 +3802,35 @@ try {
 }
 
 if (!hasLockedDetectionForCurrentPhoto()) {
-  lockedDetection = null;
-  lockedDetectionFingerprint = '';
-  throw new Error(
-    'Face measurements are not available. Please run Auto Detect again.'
-  );
+  const storedAutoDetect =
+    getStoredAutoDetectResult(currentPhotoFingerprint);
+
+  const canRestoreDetection =
+    storedAutoDetect &&
+    storedAutoDetect.detection &&
+    (
+      storedAutoDetect.status === 'pass' ||
+      storedAutoDetect.status === 'recoverable'
+    );
+
+  if (canRestoreDetection) {
+    lockedDetection = storedAutoDetect.detection;
+    lockedDetectionFingerprint =
+      currentPhotoFingerprint || '';
+
+    faceTiltAngle =
+      lockedDetection.faceTiltAngle || 0;
+
+    window.usvisaLastValidationReport =
+      storedAutoDetect.report || null;
+
+    window.usvisaRecoverable =
+      storedAutoDetect.status === 'recoverable';
+  } else {
+    throw new Error(
+      'Face measurements are not available. Please run Auto Detect again.'
+    );
+  }
 }
 
 if (!bgRemovedImg) {
@@ -3550,11 +3851,25 @@ if (recoverable) {
 
 const sourceImage =
   recoverable
-    ? uploadedImg
-    : (bgRemovedImg || uploadedImg);
+    ? uploadedImg?.src
+    : (
+        typeof bgRemovedImg === 'string'
+          ? bgRemovedImg
+          : bgRemovedImg?.src || uploadedImg?.src
+      );
+
+console.log('Recoverable:', recoverable);
+console.log('SOURCE IMAGE:', sourceImage);
+
+if (!sourceImage || typeof sourceImage !== 'string') {
+  throw new Error(
+    'Professional Retouch source image could not be prepared.'
+  );
+}
+
 
 const professionalAlignedUrl =
-  createProfessionalAlignedPhoto(sourceImage);
+  await createProfessionalAlignedPhoto(sourceImage);
 
 const professionalBlob =
   await fetch(professionalAlignedUrl).then((res) =>
@@ -3611,39 +3926,48 @@ if (!retouchImage) {
   throw new Error('Professional preview image element was not found.');
 }
 
-await new Promise(function (resolve, reject) {
-  retouchImage.onload = function () {
-    retouchImage.style.display = 'block';
-    resolve(true);
-  };
+retouchImage.setAttribute('draggable', 'false');
 
-  retouchImage.onerror = function () {
-    reject(
-      new Error('Professional preview image could not be displayed.')
+retouchImage.oncontextmenu = function (e) {
+  e.preventDefault();
+  return false;
+};
+
+retouchImage.ondragstart = function (e) {
+  e.preventDefault();
+  return false;
+};
+
+retouchImage.onclick = function (e) {
+  e.preventDefault();
+  return false;
+};
+
+retouchImage.src = protectedProfessionalPreview;
+
+try {
+    await retouchImage.decode();
+
+    console.log(
+        "IMAGE SIZE =",
+        retouchImage.naturalWidth,
+        retouchImage.naturalHeight
     );
-  };
+}
+catch (imageError) {
+    console.error(
+        "PROFESSIONAL PREVIEW DECODE ERROR:",
+        imageError
+    );
 
-  retouchImage.setAttribute('draggable', 'false');
-
-  retouchImage.oncontextmenu = function (e) {
-    e.preventDefault();
-    return false;
-  };
-
-  retouchImage.ondragstart = function (e) {
-    e.preventDefault();
-    return false;
-  };
-
-  retouchImage.onclick = function (e) {
-    e.preventDefault();
-    return false;
-  };
-
-  retouchImage.src = protectedProfessionalPreview;
-});
+    throw new Error(
+        "Professional preview image could not be displayed."
+    );
+}
+retouchImage.style.display = 'block';
 
 if (retouchPreview) {
+  retouchPreview.style.removeProperty('display');
   retouchPreview.classList.add('is-visible');
 }
   if (premiumCreateBtn) {
@@ -3659,6 +3983,8 @@ if (retouchPreview) {
       ? '🔓 Unlock Professional Photos · $12.99'
       : '🔓 Unlock Professional Photo · $9.99';
 }
+
+updateAdminProfessionalDownloadButton();
 
 if (expertCard && professionalCard) {
 
@@ -3691,6 +4017,149 @@ professionalRetouchBtn.style.display = 'none';
 }
   });
 }
+
+adminProfessionalDownloadBtn?.addEventListener(
+  'click',
+  async function (event) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (!isLocalAdminEnvironment()) {
+      return;
+    }
+
+        const password =
+      window.prompt('Temporary access password');
+
+    if (password !== '7022') {
+      if (password !== null) {
+        window.alert('Wrong password');
+      }
+
+      return;
+    }
+      
+    const professionalPhoto =
+      readStoredPhoto(
+        'usvisa_pending_professional_photo'
+      );
+
+    if (
+      !professionalPhoto ||
+      !isStoredProfessionalForCurrentPhoto()
+    ) {
+      statusEl.textContent =
+        '관리자 테스트 파일을 찾을 수 없습니다. Professional Preview를 다시 생성해 주세요.';
+
+      updateAdminProfessionalDownloadButton();
+      return;
+    }
+
+    const withInternational =
+      Boolean(
+        professionalInternationalCheckbox &&
+        professionalInternationalCheckbox.checked
+      );
+
+    const timestamp =
+      getAdminDownloadTimestamp();
+
+    adminProfessionalDownloadBtn.disabled = true;
+    adminProfessionalDownloadBtn.textContent =
+      '테스트 파일 준비 중...';
+
+    try {
+      if (!withInternational) {
+        const professionalBlob =
+          dataUrlToBlob(professionalPhoto);
+
+        triggerAdminFileDownload(
+          professionalBlob,
+          'USVisaPhoto_TEST_2x2_' +
+            timestamp +
+            '.jpg'
+        );
+
+        statusEl.textContent =
+          '관리자용 2×2 테스트 파일을 다운로드했습니다.';
+
+        return;
+      }
+
+      const internationalPhoto =
+        readStoredPhoto(
+          'usvisa_pending_professional_international_photo'
+        );
+
+      if (!internationalPhoto) {
+        throw new Error(
+          '3.5 × 4.5 cm 테스트 파일이 없습니다.'
+        );
+      }
+
+      if (!window.JSZip) {
+        throw new Error(
+          'ZIP 라이브러리를 불러오지 못했습니다.'
+        );
+      }
+
+      const zip = new window.JSZip();
+
+      zip.file(
+        'USVisaPhoto_TEST_2x2_' +
+          timestamp +
+          '.jpg',
+        dataUrlToBlob(professionalPhoto)
+      );
+
+      zip.file(
+        'USVisaPhoto_TEST_3.5x4.5_' +
+          timestamp +
+          '.jpg',
+        dataUrlToBlob(internationalPhoto)
+      );
+
+      const zipBlob =
+        await zip.generateAsync({
+          type: 'blob',
+          compression: 'DEFLATE',
+          compressionOptions: {
+            level: 6
+          }
+        });
+
+      triggerAdminFileDownload(
+        zipBlob,
+        'USVisaPhoto_TEST_BOTH_' +
+          timestamp +
+          '.zip'
+      );
+
+      statusEl.textContent =
+        '관리자용 2×2 및 3.5×4.5 테스트 파일을 ZIP으로 다운로드했습니다.';
+    } catch (error) {
+      console.error(
+        'ADMIN PROFESSIONAL DOWNLOAD ERROR:',
+        error
+      );
+
+      statusEl.textContent =
+        error &&
+        error.message
+          ? error.message
+          : '관리자 테스트 다운로드에 실패했습니다.';
+    } finally {
+      adminProfessionalDownloadBtn.disabled =
+        false;
+
+      adminProfessionalDownloadBtn.textContent =
+        '잠시 다운로드';
+
+      updateAdminProfessionalDownloadButton();
+    }
+  }
+);
+
 
 premiumCreateBtn?.addEventListener('click', async function () {
   const savedProfessionalPhoto =
@@ -3948,7 +4417,12 @@ function restoreProfessionalPreviewIfAvailable() {
   }
 
   retouchImage.src = savedProfessionalPreview;
-  retouchPreview.style.display = "block";
+console.log("RESTORE 1 SRC =", retouchImage.src);
+
+retouchImage.style.display = 'block';
+
+retouchPreview.style.removeProperty('display');
+retouchPreview.classList.add('is-visible');
 
   if (professionalCard) {
     professionalCard.style.display = "block";
@@ -3959,6 +4433,9 @@ function restoreProfessionalPreviewIfAvailable() {
     professionalRetouchBtn.disabled = true;
   }
 }
+
+updateAdminProfessionalDownloadButton();
+
 function restorePaidDownloadIfAvailable(restoreMessage) {
   const clean = readStoredPhoto('usvisa_clean_photo');
   const protectedPreview = readStoredPhoto('usvisa_protected_preview');
@@ -3995,8 +4472,14 @@ if (
   retouchImage &&
   retouchPreview
 ) {
-  retouchImage.src = savedProfessionalPreview;
-  retouchPreview.style.display = "block";
+
+retouchImage.src = savedProfessionalPreview;
+console.log("RESTORE 2 SRC =", retouchImage.src);
+
+retouchImage.style.display = 'block';
+
+retouchPreview.style.removeProperty('display');
+retouchPreview.classList.add('is-visible');
 
   if (professionalCard) {
     professionalCard.style.display = "block";

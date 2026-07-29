@@ -5,3 +5,4 @@ export { mouthValidationScript } from "./mouthValidation";
 export { poseValidationScript } from "./poseValidation";
 export { detectedPhotoValidationScript } from "./detectedPhotoValidation";
 export { appearanceValidationScript } from "./appearanceValidation";
+export { glassesValidationScript } from "./glassesValidation";

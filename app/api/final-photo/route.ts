@@ -17,7 +17,9 @@ const INTERNATIONAL_HEIGHT = 531;
 
 type PhotoFormat = 'us' | 'international';
 
-function getPhotoFormat(value: FormDataEntryValue | null): PhotoFormat {
+function getPhotoFormat(
+  value: FormDataEntryValue | null
+): PhotoFormat {
   return value === 'international'
     ? 'international'
     : 'us';
@@ -28,13 +30,10 @@ export async function POST(req: NextRequest) {
     const formData = await req.formData();
 
     const image = formData.get('image');
-    const format = getPhotoFormat(formData.get('format'));
-    const foreheadY = Number(formData.get('foreheadY'));
-    const chinY = Number(formData.get('chinY'));
-    const faceHeight = Number(formData.get('faceHeight'));
-    const imageWidth = Number(formData.get('imageWidth'));
-    const imageHeight = Number(formData.get('imageHeight'));
-    
+    const format = getPhotoFormat(
+      formData.get('format')
+    );
+
     if (!(image instanceof File)) {
       return NextResponse.json(
         {
@@ -50,66 +49,42 @@ export async function POST(req: NextRequest) {
       await image.arrayBuffer()
     );
 
-    if (format === 'international') {
-  /*
-   * 이미 완성된 600×600 US 사진을
-   * 3.5×4.5 비율로 자연스럽게 변환합니다.
-   *
-   * 사진 높이를 531px에 맞춘 뒤
-   * 좌우만 중앙 기준으로 최소 크롭합니다.
-   *
-   * 얼굴을 별도로 확대하지 않으므로
-   * 얼굴·어깨 비율이 과도하게 커지지 않습니다.
-   */
-  const resizedWidth = 610;
-  const resizedHeight = 610;
-
-  const left = Math.floor(
-    (resizedWidth - INTERNATIONAL_WIDTH) / 2
-  );
-
-  const output = await sharp(buffer)
-    .resize(resizedWidth, resizedHeight, {
-      fit: 'fill',
-    })
-    .extract({
-      left,
-      top: 28,
-      width: INTERNATIONAL_WIDTH,
-      height: INTERNATIONAL_HEIGHT,
-    })
-    .jpeg({
-      quality: 98,
-      chromaSubsampling: '4:4:4',
-      mozjpeg: true,
-    })
-    .withMetadata({
-      density: 300,
-    })
-    .toBuffer();
-
-  return new NextResponse(
-    new Uint8Array(output),
-    {
-      status: 200,
-      headers: {
-        'Content-Type': 'image/jpeg',
-        'Content-Disposition':
-          'attachment; filename="international_visa_photo_35x45mm.jpg"',
-        'Cache-Control': 'no-store',
-      },
-    }
-  );
-}
     /*
-     * 기본 미국 비자/여권 사진
-     * 2 × 2 inch, 600 × 600px, 300 DPI
+     * 이 API에서는 얼굴 배치나 크롭을 다시 하지 않는다.
+     *
+     * 얼굴 크기, 정수리 위치, 어깨 폭은
+     * 클라이언트의 photo layout engine에서
+     * 이미 완성된 상태로 전달되어야 한다.
      */
+    const targetWidth =
+      format === 'international'
+        ? INTERNATIONAL_WIDTH
+        : US_WIDTH;
+
+    const targetHeight =
+      format === 'international'
+        ? INTERNATIONAL_HEIGHT
+        : US_HEIGHT;
+
+    const filename =
+      format === 'international'
+        ? 'international_visa_photo_35x45mm.jpg'
+        : 'us_visa_photo.jpg';
+
     const output = await sharp(buffer)
-      .resize(US_WIDTH, US_HEIGHT, {
-        fit: 'cover',
-        position: 'center',
-      })
+      .resize(
+        targetWidth,
+        targetHeight,
+        {
+          /*
+           * 이미 규격 비율로 만들어진 캔버스를
+           * 그대로 출력 크기로 변환한다.
+           *
+           * cover, extract, top crop 사용 금지.
+           */
+          fit: 'fill',
+        }
+      )
       .jpeg({
         quality: 98,
         chromaSubsampling: '4:4:4',
@@ -127,7 +102,7 @@ export async function POST(req: NextRequest) {
         headers: {
           'Content-Type': 'image/jpeg',
           'Content-Disposition':
-            'attachment; filename="us_visa_photo.jpg"',
+            `attachment; filename="${filename}"`,
           'Cache-Control': 'no-store',
         },
       }
@@ -140,7 +115,8 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(
       {
-        error: 'Final photo generation failed.',
+        error:
+          'Final photo generation failed.',
       },
       {
         status: 500,

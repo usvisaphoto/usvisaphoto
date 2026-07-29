@@ -1,7 +1,12 @@
 export const detectedPhotoValidationScript = String.raw`
 function evaluateDetectedPhoto(lm, iw, ih, sourceImage) {
   const eyeResult = detectEyes(lm);
-  const mouthResult = detectMouth(lm);
+  const mouthResult = detectMouth(
+  lm,
+  sourceImage,
+  iw,
+  ih
+);
   const headMetrics = getHeadMetrics(lm, iw, ih);
   const faceDirection = detectFaceDirection(lm);
   const appearance =  validateAppearance(sourceImage, lm, iw, ih);
@@ -21,6 +26,18 @@ function evaluateDetectedPhoto(lm, iw, ih, sourceImage) {
     0,
     eyebrowTopY - chinToEyebrow * 0.42
   );
+  /*
+ * 사진 제작 전용 정수리 추정값.
+ *
+ * 기존 0.42 계산값에 레이아웃 단계에서 0.875를 다시 곱하던
+ * 이중 보정을 하나의 정수리 좌표 계산으로 통합한다.
+ *
+ * (1 + 0.42) / 0.875 - 1 ≈ 0.623
+ */
+const layoutCrownY = Math.max(
+  0,
+  eyebrowTopY - chinToEyebrow * 0.623
+);
 
   const crownToChinRatio = headMetrics.crownToChinRatio;
   const bottomSpaceRatio = headMetrics.bottomSpaceRatio;
@@ -112,20 +129,54 @@ const alreadyCropped =
 
   score = Math.max(80, Math.min(100, score));
 
-  let failureReason = null;
+ const glassesDetected =
+  Boolean(
+    appearance &&
+    appearance.glasses &&
+    appearance.glasses.glassesDetected
+  );
 
-  if (eyeResult.eyesClosed) {
-    failureReason = 'eyesClosed';
-  } else if (mouthResult.mouthOpened) {
-    failureReason = 'mouthOpen';
-  } else if (hatLikelyDetected) {
-    failureReason = 'hat';
-  } else if (faceNotStraight || sideFace) {
-    failureReason = 'direction';
-  } else if (upperBodyHardFail) {
-    failureReason = 'upperBodyTight';
-  } else if (alreadyCropped) {
-    failureReason = 'professionalRecoverable';
+const teethVisible =
+  Boolean(
+    mouthResult &&
+    mouthResult.teethVisible
+  );
+
+let failureReason = null;
+
+if (
+  glassesDetected &&
+  teethVisible
+) {
+  failureReason =
+    'glassesAndTeeth';
+} else if (glassesDetected) {
+  failureReason =
+    'glasses';
+} else if (
+  teethVisible ||
+  mouthResult.mouthOpened
+) {
+  failureReason =
+    'mouthOpen';
+} else if (eyeResult.eyesClosed) {
+  failureReason =
+    'eyesClosed';
+} else if (hatLikelyDetected) {
+  failureReason =
+    'hat';
+} else if (
+  faceNotStraight ||
+  sideFace
+) {
+  failureReason =
+    'direction';
+} else if (upperBodyHardFail) {
+  failureReason =
+    'upperBodyTight';
+} else if (alreadyCropped) {
+  failureReason =
+    'professionalRecoverable';
 }
 
   console.log({
@@ -141,17 +192,29 @@ const alreadyCropped =
 
   console.table({
   validationScore,
+  failureReason,
+
   headSizeOk,
   bottomSpaceOk,
-  upperBodyTooTight: upperBodyHardFail,
+
+  glassesDetected,
+  teethVisible,
+  mouthOpened:
+    mouthResult.mouthOpened,
+
+  upperBodyTooTight:
+    upperBodyHardFail,
+
   sideFace,
   faceNotStraight,
   hatLikelyDetected,
   alreadyCropped,
+
   crownToChinRatio,
   bottomSpaceRatio,
   lowerBodyRoomRatio,
   shoulderRoomRatio,
+
   headTooLargeForSource,
   upperBodyTooClose,
   shouldersLikelyCropped
@@ -163,6 +226,7 @@ const alreadyCropped =
     eyeResult,
     mouthResult,
     estimatedCrownY,
+    layoutCrownY,
     detectedChinY: chinY,
     foreheadY,
     faceHeight,
