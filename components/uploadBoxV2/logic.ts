@@ -12,14 +12,9 @@ const downloadBtn = document.getElementById('download-btn');
 const photoTypeInputs = document.querySelectorAll('input[name="photoType"]');
 const internationalPhotoWarning = document.getElementById('international-photo-warning');
 const internationalPackageInfo = document.getElementById('international-package-info');
-const tempDownloadBtn = document.getElementById('temp-download-btn');
 const retouchPreview = document.getElementById('retouch-preview');
 const retouchImage = document.getElementById('retouch-image');
 const premiumCreateBtn = document.getElementById('premium-create-btn');
-const adminProfessionalDownloadBtn =
-  document.getElementById(
-    'admin-professional-download-btn'
-  );
 const professionalRetouchBtn = document.getElementById('professional-retouch-btn');
 const professionalInternationalCheckbox = document.getElementById('professional-international-checkbox');
 const basicPackageNote = document.getElementById('basic-package-note');
@@ -135,37 +130,6 @@ function getAdminDownloadTimestamp() {
   );
 }
 
-function updateAdminProfessionalDownloadButton() {
-  if (!adminProfessionalDownloadBtn) {
-    return;
-  }
-
-  if (!isLocalAdminEnvironment()) {
-    adminProfessionalDownloadBtn.style.display =
-      'none';
-
-    adminProfessionalDownloadBtn.disabled = true;
-    return;
-  }
-
-  const professionalPhoto =
-    readStoredPhoto(
-      'usvisa_pending_professional_photo'
-    );
-
-  const professionalMatchesCurrentPhoto =
-    isStoredProfessionalForCurrentPhoto();
-
-  const canDownload =
-    Boolean(professionalPhoto) &&
-    professionalMatchesCurrentPhoto;
-
-  adminProfessionalDownloadBtn.style.display =
-    canDownload ? 'block' : 'none';
-
-  adminProfessionalDownloadBtn.disabled =
-    !canDownload;
-}
 
 function getSelectedBasicPackage() {
   const selected = document.querySelector(
@@ -655,15 +619,13 @@ function setBasicPhotoSectionVisible(visible) {
   const resultCanvasWrap = document.querySelector(".result-canvas-wrap");
   const photoTypeCard = document.getElementById("photo-type-card");
   const basicDownloadBtn = document.getElementById("download-btn");
-  const tempDownloadButton = document.getElementById("temp-download-btn");
-
+  
   if (resultTitle) resultTitle.style.display = display;
   if (resultSubtitle) resultSubtitle.style.display = display;
   if (resultCanvasWrap) resultCanvasWrap.style.display = display;
   if (photoTypeCard) photoTypeCard.style.display = display;
   if (basicDownloadBtn) basicDownloadBtn.style.display = display;
-  if (tempDownloadButton) tempDownloadButton.style.display = display;
-}
+  }
 
 function getCurrentImage() {
   return bgRemovedImg || uploadedImg;
@@ -1816,45 +1778,6 @@ function isStoredProfessionalForCurrentPhoto() {
   return storedFingerprint === currentPhotoFingerprint;
 }
 
-function registerTempDownloadHandler() {
-  if (!tempDownloadBtn || tempDownloadBtn.dataset.bound === '1') {
-    return;
-  }
-
-  tempDownloadBtn.dataset.bound = '1';
-
-  tempDownloadBtn.addEventListener('click', function () {
-    const password = window.prompt('Temporary access password');
-
-    if (password !== '7022') {
-      alert('Wrong password');
-      return;
-    }
-
-    const clean = readStoredPhoto('usvisa_clean_photo');
-    const professional = readStoredPhoto('usvisa_pending_professional_photo');
-
-  if (clean) {
-      if (areCreatedPhotoFilesForCurrentPhoto()) {
-        triggerPhotoDownload(clean, 'us_visa_photo_test.jpg');
-      }
-    }
-
-    if (
-      professional &&
-      areCreatedPhotoFilesForCurrentPhoto() &&
-      isStoredProfessionalForCurrentPhoto()
-    ) {
-      triggerPhotoDownload(
-        professional,
-        'professional_retouch_test.jpg'
-      );
-    }
-  });
-}
-
-registerTempDownloadHandler();
-
 let currentPhotoFingerprint = '';
 
 async function createPhotoFingerprint(file) {
@@ -2082,15 +2005,6 @@ function resetForNewUpload() {
   if (retouchPreview) {
     retouchPreview.style.display = 'none';
     retouchPreview.classList.remove('is-visible');
-}
-
-if (adminProfessionalDownloadBtn) {
-  adminProfessionalDownloadBtn.style.display =
-    'none';
-
-  adminProfessionalDownloadBtn.disabled = true;
-  adminProfessionalDownloadBtn.textContent =
-    '잠시 다운로드';
 }
 
   if (professionalCard) {
@@ -4018,147 +3932,6 @@ professionalRetouchBtn.style.display = 'none';
   });
 }
 
-adminProfessionalDownloadBtn?.addEventListener(
-  'click',
-  async function (event) {
-    event.preventDefault();
-    event.stopPropagation();
-
-    if (!isLocalAdminEnvironment()) {
-      return;
-    }
-
-        const password =
-      window.prompt('Temporary access password');
-
-    if (password !== '7022') {
-      if (password !== null) {
-        window.alert('Wrong password');
-      }
-
-      return;
-    }
-      
-    const professionalPhoto =
-      readStoredPhoto(
-        'usvisa_pending_professional_photo'
-      );
-
-    if (
-      !professionalPhoto ||
-      !isStoredProfessionalForCurrentPhoto()
-    ) {
-      statusEl.textContent =
-        '관리자 테스트 파일을 찾을 수 없습니다. Professional Preview를 다시 생성해 주세요.';
-
-      updateAdminProfessionalDownloadButton();
-      return;
-    }
-
-    const withInternational =
-      Boolean(
-        professionalInternationalCheckbox &&
-        professionalInternationalCheckbox.checked
-      );
-
-    const timestamp =
-      getAdminDownloadTimestamp();
-
-    adminProfessionalDownloadBtn.disabled = true;
-    adminProfessionalDownloadBtn.textContent =
-      '테스트 파일 준비 중...';
-
-    try {
-      if (!withInternational) {
-        const professionalBlob =
-          dataUrlToBlob(professionalPhoto);
-
-        triggerAdminFileDownload(
-          professionalBlob,
-          'USVisaPhoto_TEST_2x2_' +
-            timestamp +
-            '.jpg'
-        );
-
-        statusEl.textContent =
-          '관리자용 2×2 테스트 파일을 다운로드했습니다.';
-
-        return;
-      }
-
-      const internationalPhoto =
-        readStoredPhoto(
-          'usvisa_pending_professional_international_photo'
-        );
-
-      if (!internationalPhoto) {
-        throw new Error(
-          '3.5 × 4.5 cm 테스트 파일이 없습니다.'
-        );
-      }
-
-      if (!window.JSZip) {
-        throw new Error(
-          'ZIP 라이브러리를 불러오지 못했습니다.'
-        );
-      }
-
-      const zip = new window.JSZip();
-
-      zip.file(
-        'USVisaPhoto_TEST_2x2_' +
-          timestamp +
-          '.jpg',
-        dataUrlToBlob(professionalPhoto)
-      );
-
-      zip.file(
-        'USVisaPhoto_TEST_3.5x4.5_' +
-          timestamp +
-          '.jpg',
-        dataUrlToBlob(internationalPhoto)
-      );
-
-      const zipBlob =
-        await zip.generateAsync({
-          type: 'blob',
-          compression: 'DEFLATE',
-          compressionOptions: {
-            level: 6
-          }
-        });
-
-      triggerAdminFileDownload(
-        zipBlob,
-        'USVisaPhoto_TEST_BOTH_' +
-          timestamp +
-          '.zip'
-      );
-
-      statusEl.textContent =
-        '관리자용 2×2 및 3.5×4.5 테스트 파일을 ZIP으로 다운로드했습니다.';
-    } catch (error) {
-      console.error(
-        'ADMIN PROFESSIONAL DOWNLOAD ERROR:',
-        error
-      );
-
-      statusEl.textContent =
-        error &&
-        error.message
-          ? error.message
-          : '관리자 테스트 다운로드에 실패했습니다.';
-    } finally {
-      adminProfessionalDownloadBtn.disabled =
-        false;
-
-      adminProfessionalDownloadBtn.textContent =
-        '잠시 다운로드';
-
-      updateAdminProfessionalDownloadButton();
-    }
-  }
-);
 
 
 premiumCreateBtn?.addEventListener('click', async function () {
