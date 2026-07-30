@@ -4207,7 +4207,6 @@ retouchPreview.classList.add('is-visible');
   }
 }
 
-updateAdminProfessionalDownloadButton();
 
 function restorePaidDownloadIfAvailable(restoreMessage) {
   const clean = readStoredPhoto('usvisa_clean_photo');
