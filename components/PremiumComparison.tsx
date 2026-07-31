@@ -34,7 +34,7 @@ export default function PremiumComparison() {
     {
       badge: "3. Expert",
       badgeClass: "bg-slate-900 text-white",
-      price: "Custom",
+      price: "$19.99",
       cardClass: "bg-slate-950/70 text-white",
       bestFor:
         "Best if: your photo doesn't meet U.S. visa/passport requirements at all, but you don't want your face altered \u2014 you want it made right, your way.",

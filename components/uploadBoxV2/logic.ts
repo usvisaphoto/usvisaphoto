@@ -2653,16 +2653,65 @@ if (poseRecoverable) {
 crownLine.style.display = 'none';
 chinLine.style.display = 'none';
 
+const sourceForm = new FormData();
+sourceForm.append('image', uploadedFile);
+
+const sourceRes = await fetch('/api/source-photo-check', {
+  method: 'POST',
+  body: sourceForm,
+});
+
+const sourceData = await sourceRes.json();
+
+if (
+  sourceData.source === 'PRINTED_PHOTO' ||
+  sourceData.source === 'PHOTO_OF_PHOTO' ||
+  sourceData.source === 'SCREEN_CAPTURE'
+) {
+  photoValidationPassed = false;
+  autoDetectLocked = true;
+
+  const message =
+    'This appears to be a photographed printed photo or screen image.<br><br>' +
+    'Automatic creation is disabled for this type of source.<br><br>' +
+    'Please use Expert Manual Editing for best results.';
+
+  showValidationRecoverable(message);
+
+  setDetectButtonState('warning');
+  setCreateEnabled(false);
+
+  if (createBtn) {
+    createBtn.style.display = 'none';
+  }
+
+  if (professionalCard) {
+    professionalCard.style.display = 'none';
+  }
+
+  if (expertCard) {
+    expertCard.style.display = 'block';
+  }
+
+  statusEl.textContent =
+    'Expert Manual Editing is recommended for this photo.';
+
+  return;
+}
+
 showCreatePhotoButton();
+
 setCreateEnabled(true);
+
 setDetectButtonState('success');
+
 saveAutoDetectPass(
   currentPhotoFingerprint,
   lockedDetection,
   window.usvisaLastValidationReport
 );
-showValidationReady();
 
+showValidationReady();
 
 
 
