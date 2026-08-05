@@ -1460,73 +1460,130 @@ const bilateralFrames =
   leftFrame.frameDetected &&
   rightFrame.frameDetected;
 
+const candidateBalance =
+  Math.min(
+    leftFrame.averageCandidateRatio,
+    rightFrame.averageCandidateRatio
+  ) /
+  Math.max(
+    leftFrame.averageCandidateRatio,
+    rightFrame.averageCandidateRatio,
+    0.0001
+  );
+
+const edgeBalance =
+  Math.min(
+    leftFrame.averageEdgeRatio,
+    rightFrame.averageEdgeRatio
+  ) /
+  Math.max(
+    leftFrame.averageEdgeRatio,
+    rightFrame.averageEdgeRatio,
+    0.0001
+  );
+
+const balancedBilateralPattern =
+  candidateBalance >= 0.56 &&
+  edgeBalance >= 0.56;
+
+const confidence =
+  glassesClamp(
+    leftFrame.score * 0.38 +
+    rightFrame.score * 0.38 +
+    bridge.score * 0.24,
+    0,
+    1
+  );
+
 /*
- * 양쪽 프레임이 모두 검출되고,
- * 콧등 브리지까지 검출될 때 안경으로 판정한다.
+ * V4 final decision:
+ * 1) normal full-rim glasses can pass even when the nose bridge is faint,
+ * 2) no-glasses false positives still require bilateral, symmetric frame evidence,
+ * 3) thin or rimless glasses still require bridge evidence.
  */
-const bilateralWithBridge =
+const strongFullRimPattern =
   bilateralFrames &&
-  bridge.detected &&
-  leftFrame.outerDetected &&
-  rightFrame.outerDetected;
-/*
- * 얇은 금속테 보조 판정
- * 브리지는 확실하고
- * 양쪽 점수가 모두 어느 정도 이상이면 인정.
- */
-const thinMetalFrame =
+  balancedBilateralPattern &&
   leftFrame.detectedSegments >= 2 &&
   rightFrame.detectedSegments >= 2 &&
-  leftFrame.score > 0.42 &&
-  rightFrame.score > 0.42 &&
-  (
-    bridge.detected ||
-    bridge.score > 0.22
-  ) &&
-  (
-    leftFrame.outerDetected ||
-    rightFrame.outerDetected
-  );
-/*
- * 일반적인 두꺼운 안경
- */
-const strongSymmetricPattern =
-  leftFrame.detectedSegments >= 3 &&
-  rightFrame.detectedSegments >= 3 &&
-  leftFrame.score > 0.52 &&
-  rightFrame.score > 0.52 &&
-  bridge.score > 0.30 &&
+  leftFrame.topDetected &&
+  rightFrame.topDetected &&
   leftFrame.outerDetected &&
-  rightFrame.outerDetected;
+  rightFrame.outerDetected &&
+  leftFrame.score >= 0.48 &&
+  rightFrame.score >= 0.48 &&
+  confidence >= 0.50 &&
+  (
+    leftFrame.innerDetected ||
+    rightFrame.innerDetected ||
+    bridge.score >= 0.18
+  );
 
-console.log({
-  bilateralWithBridge,
-  thinMetalFrame,
-  strongSymmetricPattern
-});
+const thinOrMetalFramePattern =
+  balancedBilateralPattern &&
+  leftFrame.detectedSegments >= 2 &&
+  rightFrame.detectedSegments >= 2 &&
+  leftFrame.outerDetected &&
+  rightFrame.outerDetected &&
+  leftFrame.score >= 0.44 &&
+  rightFrame.score >= 0.44 &&
+  bridge.score >= 0.62 &&
+  confidence >= 0.48;
+
+const veryStrongSymmetricPattern =
+  balancedBilateralPattern &&
+  leftFrame.detectedSegments >= 4 &&
+  rightFrame.detectedSegments >= 4 &&
+  leftFrame.outerDetected &&
+  rightFrame.outerDetected &&
+  leftFrame.innerDetected &&
+  rightFrame.innerDetected &&
+  leftFrame.score >= 0.60 &&
+  rightFrame.score >= 0.60 &&
+  confidence >= 0.58;
+
+
+  const highConfidenceBridgePattern =
+  bridge.detected &&
+  bridge.score >= 0.70 &&
+  leftFrame.score >= 0.72 &&
+  rightFrame.score >= 0.72 &&
+  leftFrame.detectedSegments >= 2 &&
+  rightFrame.detectedSegments >= 2;
+
+
+/*
+ * 실제 안경 직접 판정
+ *
+ * 특정 테 구간이나 브리지가 누락되더라도,
+ * 양쪽 눈에서 강한 프레임 증거가 동시에 확인되면
+ * 실제 안경으로 판정한다.
+ */
+const directGlassesEvidence =
+  confidence >= 0.80 &&
+  leftFrame.score >= 0.72 &&
+  rightFrame.score >= 0.72 &&
+  leftFrame.detectedSegments >= 2 &&
+  rightFrame.detectedSegments >= 2;
 
 const glassesDetected =
-    bilateralWithBridge ||
-    thinMetalFrame ||
-    strongSymmetricPattern;
+  directGlassesEvidence ||
+  highConfidenceBridgePattern ||
+  strongFullRimPattern ||
+  thinOrMetalFramePattern ||
+  veryStrongSymmetricPattern;
 
- console.log("GLASSES RULES", {
-  bilateralWithBridge,
-  thinMetalFrame,
-  strongSymmetricPattern,
-});   
-
-  const confidence =
-    glassesClamp(
-      leftFrame.score *
-        0.38 +
-      rightFrame.score *
-        0.38 +
-      bridge.score *
-        0.24,
-      0,
-      1
-    );
+console.log("GLASSES RULES", {
+  directGlassesEvidence,
+  highConfidenceBridgePattern,
+  strongFullRimPattern,
+  thinOrMetalFramePattern,
+  veryStrongSymmetricPattern,
+  candidateBalance,
+  edgeBalance,
+  confidence,
+  glassesDetected
+});
 
   const result = {
     glassesDetected,

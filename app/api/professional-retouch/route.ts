@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI, { toFile } from "openai";
-import { PROFESSIONAL_RETOUCH_PROMPT } from "@/lib/prompts/professionalRetouch";
+import {
+  PROFESSIONAL_RETOUCH_PROMPT,
+  GLASSES_REMOVAL_PROMPT,
+} from "@/lib/prompts/professionalRetouch";
 
 export const runtime = "nodejs";
 
@@ -37,6 +40,12 @@ export async function POST(req: NextRequest) {
 
     const formData = await req.formData();
     const image = formData.get("image");
+    const removeGlasses = formData.get("removeGlasses") === "true";
+
+    console.log(
+      "PROFESSIONAL REMOVE GLASSES:",
+      removeGlasses
+    );
 
     if (!(image instanceof File)) {
       return NextResponse.json(
@@ -78,7 +87,17 @@ export async function POST(req: NextRequest) {
     const response = await openai.images.edit({
       model: "gpt-image-2",
       image: openaiFile,
-      prompt: PROFESSIONAL_RETOUCH_PROMPT,
+      prompt: removeGlasses
+        ? [
+            GLASSES_REMOVAL_PROMPT,
+            "",
+            "The glasses-removal instructions above are mandatory and have the highest priority.",
+            "The returned photograph must contain no eyeglasses, lenses, rims, bridge, nose pads, hinges, temples, reflections, shadows, glare, or frame remnants.",
+            "The final result must clearly look like the same person naturally photographed without glasses.",
+            "",
+            PROFESSIONAL_RETOUCH_PROMPT,
+          ].join("\n")
+        : PROFESSIONAL_RETOUCH_PROMPT,
       size: "1024x1024",
       quality: "medium",
       output_format: "png",

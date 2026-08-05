@@ -225,3 +225,20 @@ QUALITY PRIORITY (Highest to Lowest)
 
 The Professional Retouch must look immediately better than the Basic Photo at first glance while still looking like the exact same person.
 `;
+
+export const GLASSES_REMOVAL_PROMPT = `
+
+GLASSES REMOVAL — APPLY ONLY WHEN REQUESTED
+
+GLASSES REMOVAL IS THE HIGHEST-PRIORITY EDIT FOR THIS REQUEST.
+The final photograph must clearly show the same person naturally photographed without wearing glasses.
+Do not return an image with any visible glasses or frame remnants.
+
+- Remove the eyeglasses completely, including both lenses, all frame rims, bridge, nose pads, hinges, temples, shadows, reflections, glare, and residual artifacts.
+- Restore the exact natural eye area behind the glasses.
+- Preserve the subject's original eye size, shape, spacing, eyelids, iris direction, eyebrows, nose bridge, skin texture, age, ethnicity, and identity.
+- Do not beautify, enlarge, reshape, symmetrize, or redesign the eyes.
+- Reconstruct only details actually obscured by the glasses and keep all visible original details unchanged.
+- The result must look like the same person naturally photographed without glasses, not a generated or altered identity.
+- Keep a neutral expression and an embassy-appropriate realistic finish.
+`;

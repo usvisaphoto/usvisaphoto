@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import sharp from 'sharp';
+import { applyBasicColorEngine } from '@/lib/color-engine';
 
 export const runtime = 'nodejs';
 
@@ -71,7 +72,9 @@ export async function POST(req: NextRequest) {
         ? 'international_visa_photo_35x45mm.jpg'
         : 'us_visa_photo.jpg';
 
-    const output = await sharp(buffer)
+    const colorCorrectedBuffer = await applyBasicColorEngine(buffer);
+
+    const output = await sharp(colorCorrectedBuffer)
       .resize(
         targetWidth,
         targetHeight,

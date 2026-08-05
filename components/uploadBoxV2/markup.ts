@@ -189,20 +189,23 @@ export const uploadBoxMarkup = String.raw`
 <div id="professional-retouch-card" class="professional-retouch-card">
 
   <div class="professional-title">
-    2. Professional Retouch
+    2. Embassy-Ready Upgrade
   </div>
 
   <div class="professional-subtitle">
-    Compare the standard photo with a studio-quality retouched version.
+    Turn your existing photo into an embassy-ready U.S. visa photo.
   </div>
 
   <div class="professional-features">
     <div>✔ Identity Preserved</div>
     <div>✔ Natural Skin Texture</div>
+    <div>✔ Natural Skin Tone</div>
+    <div>✔ Remove Glasses (when possible)</div>
+    <div>✔ Restore Natural Eyes</div>
     <div>✔ Hair Cleanup</div>
     <div>✔ Clothing Cleanup</div>
     <div>✔ Professional Studio Lighting</div>
-    <div>✔ Embassy Safe</div>
+    <div>✔ Embassy-Ready Finish</div>
   </div>
 
   <label class="professional-international-option">
@@ -222,7 +225,7 @@ export const uploadBoxMarkup = String.raw`
   type="button">
 
   <span class="professional-preview-button-title">
-    Preview It Before You Decide
+    Preview Embassy-Ready Upgrade
   </span>
 
   <span class="professional-preview-button-note">

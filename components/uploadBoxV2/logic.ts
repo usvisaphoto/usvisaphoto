@@ -667,12 +667,12 @@ if (expertCard) {
       '<hr style="margin:14px 0;">' +
 
       '<div style="color:#047857;font-weight:700;">' +
-        '✓ Professional Retouch can automatically reconstruct ' +
+        '✓ Embassy-Ready Upgrade can automatically reconstruct ' +
         'missing shoulders and upper body.' +
       '</div>';
 if (detectBtn) {
   detectBtn.disabled = false;
-  detectBtn.textContent = "2. Professional Retouch · $9.99";
+  detectBtn.textContent = "2. Embassy-Ready Upgrade · $9.99";
   detectBtn.style.background = "#f59e0b";
   detectBtn.style.color = "#ffffff";
   detectBtn.style.cursor = "pointer";
@@ -681,12 +681,12 @@ if (detectBtn) {
     event.preventDefault();
 
     if (!premiumCreateBtn) {
-      console.error("Professional Retouch button was not found.");
+      console.error("Embassy-Ready Upgrade button was not found.");
       return;
     }
 
     if (!professionalRetouchBtn) {
-  console.error("Professional Retouch preview button was not found.");
+  console.error("Embassy-Ready Upgrade preview button was not found.");
   return;
 }
 
@@ -706,6 +706,31 @@ if (createBtn) {
 }
   }
   } 
+
+function showValidationExpertOnly(message) {
+  if (resultPanel) {
+    resultPanel.style.display = 'block';
+  }
+
+  setBasicPhotoSectionVisible(false);
+
+  if (validationCard) {
+    validationCard.style.display = 'block';
+    validationCard.className =
+      'validation-card validation-warning';
+  }
+
+  if (validationFinal) {
+    validationFinal.innerHTML =
+      '<div style="font-size:20px;font-weight:700;color:#d97706;">' +
+        'MANUAL EDITING REQUIRED' +
+      '</div>' +
+      '<div style="margin-top:10px;line-height:1.7;">' +
+        message +
+      '</div>';
+  }
+}
+
 function restoreStoredAutoDetectResult() {
   const storedAutoDetect =
     getStoredAutoDetectResult(currentPhotoFingerprint);
@@ -744,12 +769,20 @@ function restoreStoredAutoDetectResult() {
     faceTiltAngle = lockedDetection.faceTiltAngle || 0;
     window.usvisaRecoverable = true;
 
+    const restoredRecoverableMessage =
+      String(storedAutoDetect.message || '');
+
+    window.usvisaGlassesUpgrade =
+      restoredRecoverableMessage
+        .toLowerCase()
+        .includes('glasses');
+
     photoValidationPassed = false;
     autoDetectLocked = true;
 
     showValidationRecoverable(
       storedAutoDetect.message ||
-      'This photo is eligible for Professional Retouch or Expert Manual Editing.'
+      'This photo is eligible for Embassy-Ready Upgrade or Expert Manual Editing.'
     );
 
     setDetectButtonState('warning');
@@ -773,7 +806,45 @@ function restoreStoredAutoDetectResult() {
     }
 
     statusEl.textContent =
-      'Auto detection restored. This photo is eligible for Professional Retouch or Expert Manual Editing.';
+      'Auto detection restored. This photo is eligible for Embassy-Ready Upgrade or Expert Manual Editing.';
+
+    return true;
+  }
+
+  if (storedAutoDetect.status === 'expert-only') {
+    lockedDetection = storedAutoDetect.detection || null;
+    lockedDetectionFingerprint =
+      lockedDetection ? (currentPhotoFingerprint || '') : '';
+    photoValidationPassed = false;
+    autoDetectLocked = true;
+    window.usvisaRecoverable = false;
+
+    showValidationExpertOnly(
+      storedAutoDetect.message ||
+      'This source requires Expert Manual Editing.'
+    );
+
+    setDetectButtonState('warning');
+    setCreateEnabled(false);
+
+    if (createBtn) {
+      createBtn.style.display = 'none';
+    }
+
+    if (professionalCard) {
+      professionalCard.style.display = 'none';
+    }
+
+    if (professionalRetouchBtn) {
+      professionalRetouchBtn.style.display = 'none';
+    }
+
+    if (expertCard) {
+      expertCard.style.display = 'block';
+    }
+
+    statusEl.textContent =
+      'Expert Manual Editing is required for this photo source.';
 
     return true;
   }
@@ -784,10 +855,11 @@ function restoreStoredAutoDetectResult() {
     lockedDetectionFingerprint = '';
     photoValidationPassed = false;
     window.usvisaRecoverable = false;
+    autoDetectLocked = true;
     setCreateEnabled(false);
     setDetectButtonState('deny');
     statusEl.textContent =
-      'This photo was previously denied by Auto Detect. Please upload another photo or run Auto Detect again.';
+      'This photo was previously denied by Auto Detect. Please upload another photo.';
     return true;
   }
 
@@ -1977,6 +2049,7 @@ function resetForNewUpload() {
   guideMode = 'auto';
   photoValidationPassed = false;
   window.usvisaRecoverable = false;
+  window.usvisaGlassesUpgrade = false;
   window.usvisaLastValidationReport = null;
   window.usvisaLastValidationResult = null;
   setDetectButtonState('auto');
@@ -2274,18 +2347,22 @@ if (checkMouth) {
     }
 
     if (validation.failureReason === 'glassesAndTeeth') {
-  showValidationError(
-    '❌ Glasses are not allowed.<br>❌ Teeth must not be visible.<br>Please upload a photo without glasses and keep your mouth closed.'
-  );
-  return false;
-}
+      showValidationError(
+        '❌ Glasses are not allowed.<br>❌ Teeth must not be visible.<br>Please keep your mouth closed. Glasses removal is available through 2. Embassy-Ready Upgrade.'
+      );
+      window.usvisaGlassesUpgrade = true;
+      validation.eruGlasses = true;
+      return validation;
+    }
 
-if (validation.failureReason === 'glasses') {
-  showValidationError(
-    '❌ Glasses are not allowed.<br>Please upload a photo without glasses.'
-  );
-  return false;
-}
+    if (validation.failureReason === 'glasses') {
+      showValidationError(
+        '❌ Glasses are not allowed for a standard U.S. visa photo.<br><br>2. Embassy-Ready Upgrade can remove the glasses and restore the eye area naturally.<br>Preview available before payment.'
+      );
+      window.usvisaGlassesUpgrade = true;
+      validation.eruGlasses = true;
+      return validation;
+    }
 
    if (validation.failureReason === 'mouthOpen') {
   showValidationError(
@@ -2342,6 +2419,10 @@ return false;
 detectBtn.addEventListener('click', async function(e) {
   e.preventDefault();
 
+  if (restoreStoredAutoDetectResult()) {
+    return;
+  }
+
   if (autoDetectLocked) {
     statusEl.innerHTML =
       '✅ Auto detection has already been completed for this photo.<br>Please create the photo or choose another photo.';
@@ -2363,6 +2444,7 @@ detectBtn.addEventListener('click', async function(e) {
   lockedDetectionFingerprint = '';
   photoValidationPassed = false;
   window.usvisaRecoverable = false;
+  window.usvisaGlassesUpgrade = false;
   window.usvisaLastValidationReport = null;
   window.usvisaLastValidationResult = null;
   resultUrl = null;
@@ -2602,6 +2684,134 @@ lockedDetection = {
 };
 lockedDetectionFingerprint = currentPhotoFingerprint || '';
 
+const sourceForm = new FormData();
+sourceForm.append('image', uploadedFile);
+
+let sourceType = 'UNCERTAIN';
+
+try {
+  const sourceResponse = await fetch('/api/source-photo-check', {
+    method: 'POST',
+    body: sourceForm
+  });
+
+  if (sourceResponse.ok) {
+    const sourceResult = await sourceResponse.json();
+    sourceType = sourceResult && sourceResult.source
+      ? sourceResult.source
+      : 'UNCERTAIN';
+  } else {
+    console.error(
+      'SOURCE PHOTO CHECK ERROR:',
+      await sourceResponse.text()
+    );
+  }
+} catch (sourceError) {
+  console.error('SOURCE PHOTO CHECK ERROR:', sourceError);
+}
+
+if (
+  sourceType === 'PRINTED_PHOTO' ||
+  sourceType === 'PHOTO_OF_PHOTO' ||
+  sourceType === 'SCREEN_CAPTURE'
+) {
+  const expertOnlyMessage =
+    'This appears to be a photographed printed photo or screen image.<br><br>' +
+    'Automatic creation is disabled for this source.<br><br>' +
+    'Please use Expert Manual Editing for best results.';
+
+  photoValidationPassed = false;
+  autoDetectLocked = true;
+  window.usvisaRecoverable = false;
+
+  saveAutoDetectExpertOnly(
+    currentPhotoFingerprint,
+    lockedDetection,
+    expertOnlyMessage,
+    sourceType
+  );
+
+  showValidationExpertOnly(expertOnlyMessage);
+  setDetectButtonState('warning');
+  setCreateEnabled(false);
+
+  if (createBtn) {
+    createBtn.style.display = 'none';
+  }
+
+  if (professionalCard) {
+    professionalCard.style.display = 'none';
+  }
+
+  if (professionalRetouchBtn) {
+    professionalRetouchBtn.style.display = 'none';
+  }
+
+  if (expertCard) {
+    expertCard.style.display = 'block';
+  }
+
+  statusEl.textContent =
+    'Expert Manual Editing is required for this photo source.';
+
+  return;
+}
+
+if (validation.eruGlasses === true) {
+  window.usvisaRecoverable = true;
+  window.usvisaGlassesUpgrade = true;
+  photoValidationPassed = false;
+  autoDetectLocked = true;
+
+  const glassesUpgradeMessage =
+    'Glasses are not allowed for a standard U.S. visa photo.<br><br>' +
+    '2. Embassy-Ready Upgrade can remove the glasses and restore the eye area naturally.<br><br>' +
+    'Preview the upgraded result before payment.';
+
+  saveAutoDetectRecoverable(
+    currentPhotoFingerprint,
+    lockedDetection,
+    glassesUpgradeMessage
+  );
+
+  showValidationRecoverable(glassesUpgradeMessage);
+  setDetectButtonState('warning');
+  setCreateEnabled(false);
+
+  if (createBtn) {
+    createBtn.style.display = 'none';
+  }
+
+  if (professionalCard) {
+    professionalCard.style.display = 'block';
+  }
+
+  if (professionalRetouchBtn) {
+    professionalRetouchBtn.style.display = 'block';
+    professionalRetouchBtn.querySelector('.professional-preview-button-title').textContent =
+      'Preview Glasses Removal';
+    applyProfessionalPreviewDailyState();
+  }
+
+  if (expertCard) {
+    expertCard.style.display = 'block';
+  }
+
+  statusEl.textContent =
+    'Glasses detected. Continue with 2. Embassy-Ready Upgrade.';
+
+  setTimeout(function () {
+    if (professionalCard) {
+      professionalCard.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center'
+      });
+    }
+  }, 250);
+
+  return;
+}
+
 if (poseRecoverable) {
   window.usvisaRecoverable = true;
 
@@ -2643,7 +2853,7 @@ if (poseRecoverable) {
   }
 
   statusEl.textContent =
-    'This photo is eligible for Professional Retouch or Expert Manual Editing.';
+    'This photo is eligible for Embassy-Ready Upgrade or Expert Manual Editing.';
 
   return;
 }
@@ -2652,52 +2862,6 @@ if (poseRecoverable) {
 
 crownLine.style.display = 'none';
 chinLine.style.display = 'none';
-
-const sourceForm = new FormData();
-sourceForm.append('image', uploadedFile);
-
-const sourceRes = await fetch('/api/source-photo-check', {
-  method: 'POST',
-  body: sourceForm,
-});
-
-const sourceData = await sourceRes.json();
-
-if (
-  sourceData.source === 'PRINTED_PHOTO' ||
-  sourceData.source === 'PHOTO_OF_PHOTO' ||
-  sourceData.source === 'SCREEN_CAPTURE'
-) {
-  photoValidationPassed = false;
-  autoDetectLocked = true;
-
-  const message =
-    'This appears to be a photographed printed photo or screen image.<br><br>' +
-    'Automatic creation is disabled for this type of source.<br><br>' +
-    'Please use Expert Manual Editing for best results.';
-
-  showValidationRecoverable(message);
-
-  setDetectButtonState('warning');
-  setCreateEnabled(false);
-
-  if (createBtn) {
-    createBtn.style.display = 'none';
-  }
-
-  if (professionalCard) {
-    professionalCard.style.display = 'none';
-  }
-
-  if (expertCard) {
-    expertCard.style.display = 'block';
-  }
-
-  statusEl.textContent =
-    'Expert Manual Editing is recommended for this photo.';
-
-  return;
-}
 
 showCreatePhotoButton();
 
@@ -2825,7 +2989,7 @@ function drawFinalPhoto(sourceImg) {
   ctx.drawImage(sourceImg, -finalCenterX, -crownY);
   ctx.restore();
 
-  enhanceCanvas(ctx, TARGET, TARGET);
+
  drawOverlayGuide();
   return canvas.toDataURL('image/jpeg', 0.99);
 }
@@ -2909,7 +3073,14 @@ const faceHeightIn =
 
   //----------------------------------
 
-  const measureX=W-32;
+  /*
+   * Place the face-height label over the right edge of the head
+   * instead of pushing it against the outer photo border.
+   */
+  const headCenterX = W / 2;
+  const measureX =
+    headCenterX +
+    TARGET_HEAD_PX * 0.34;
 
   octx.beginPath();
 
@@ -2921,22 +3092,31 @@ const faceHeightIn =
 
   octx.fillStyle="#32c987";
 
+  const measureLabelWidth = 72;
+  const measureLabelHeight = 30;
+
   octx.fillRect(
-      measureX-18,
-      (headTop+headBottom)/2-15,
-      60,
-      30
+    measureX - measureLabelWidth / 2,
+    (headTop + headBottom) / 2 -
+      measureLabelHeight / 2,
+    measureLabelWidth,
+    measureLabelHeight
   );
 
   octx.fillStyle="white";
 
   octx.font="bold 16px Arial";
+  octx.textAlign = 'center';
+  octx.textBaseline = 'middle';
 
   octx.fillText(
-      faceHeightIn.toFixed(2) + " in",
-      measureX-10,
-      (headTop+headBottom)/2+6
+    faceHeightIn.toFixed(2) + " in",
+    measureX,
+    (headTop + headBottom) / 2
   );
+
+  octx.textAlign = 'start';
+  octx.textBaseline = 'alphabetic';
 
   //----------------------------------
   // TOP 2 inch
@@ -3798,7 +3978,7 @@ if (!hasLockedDetectionForCurrentPhoto()) {
 
 if (!bgRemovedImg) {
   statusEl.textContent =
-    'Preparing your photo for Professional Retouch...';
+    'Preparing your Embassy-Ready Upgrade preview...';
 
   bgRemovedImg =
     await removeBackgroundWithPhotoRoom();
@@ -3807,13 +3987,16 @@ if (!bgRemovedImg) {
 const recoverable =
   window.usvisaRecoverable === true;
 
+const glassesUpgrade =
+  window.usvisaGlassesUpgrade === true;
+
 if (recoverable) {
   statusEl.textContent =
-    'Professional Retouch will reconstruct the missing shoulder area.';
+    'Embassy-Ready Upgrade will reconstruct the missing shoulder area.';
 }
 
 const sourceImage =
-  recoverable
+  recoverable || glassesUpgrade
     ? uploadedImg?.src
     : (
         typeof bgRemovedImg === 'string'
@@ -3822,6 +4005,7 @@ const sourceImage =
       );
 
 console.log('Recoverable:', recoverable);
+console.log('Glasses upgrade:', glassesUpgrade);
 console.log('SOURCE IMAGE:', sourceImage);
 
 if (!sourceImage || typeof sourceImage !== 'string') {
@@ -3839,12 +4023,50 @@ const professionalBlob =
     res.blob()
   );
 
+const lastValidationResult =
+  window.usvisaLastValidationResult || null;
+
+const lastFailureReason =
+  lastValidationResult &&
+  typeof lastValidationResult.failureReason === 'string'
+    ? lastValidationResult.failureReason
+    : '';
+
+const storedDetectResult =
+  getStoredAutoDetectResult(currentPhotoFingerprint);
+
+const storedDetectMessage =
+  storedDetectResult &&
+  typeof storedDetectResult.message === 'string'
+    ? storedDetectResult.message
+    : '';
+
+const shouldRemoveGlasses =
+  window.usvisaGlassesUpgrade === true ||
+  lastFailureReason === 'glasses' ||
+  lastFailureReason === 'glassesAndTeeth' ||
+  storedDetectMessage
+    .toLowerCase()
+    .includes('glasses');
+
+console.log('ERU GLASSES REQUEST', {
+  windowFlag: window.usvisaGlassesUpgrade,
+  lastFailureReason,
+  storedDetectMessage,
+  shouldRemoveGlasses
+});
+
 const formData = new FormData();
 
 formData.append(
   'image',
   professionalBlob,
   'professional-aligned-photo.jpg'
+);
+
+formData.append(
+  'removeGlasses',
+  shouldRemoveGlasses ? 'true' : 'false'
 );
 const res = await fetch('/api/professional-retouch', {
   method: 'POST',
@@ -3947,7 +4169,9 @@ if (retouchPreview) {
       : '🔓 Unlock Professional Photo · $9.99';
 }
 
-updateAdminProfessionalDownloadButton();
+if (typeof updateAdminProfessionalDownloadButton === 'function') {
+  updateAdminProfessionalDownloadButton();
+}
 
 if (expertCard && professionalCard) {
 

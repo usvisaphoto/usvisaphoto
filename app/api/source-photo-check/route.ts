@@ -3,10 +3,6 @@ import OpenAI from "openai";
 
 export const runtime = "nodejs";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
-
 type SourceResult = {
   source:
     | "DIGITAL"
@@ -37,6 +33,17 @@ function normalize(value: unknown): SourceResult {
 
 export async function POST(req: Request) {
   try {
+    if (!process.env.OPENAI_API_KEY) {
+      return NextResponse.json(
+        { source: "UNCERTAIN" },
+        { status: 200 }
+      );
+    }
+
+    const openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+
     const formData = await req.formData();
     const image = formData.get("image");
 
@@ -71,26 +78,29 @@ Return ONLY JSON.
 }
 
 DIGITAL
-- Original phone photo
-- Original camera photo
-- Original portrait
+- Original phone or camera photo
+- Original digital studio portrait
+- Clean digital image with no visible paper, frame, device, or screen
 
 PRINTED_PHOTO
-- Printed passport photo
-- Printed ID photo
-- Printed studio portrait
+- Scan or image of a printed passport, ID, or studio photograph
+- Visible photo paper, print border, paper texture, gloss, or print artifacts
 
 PHOTO_OF_PHOTO
-- Someone photographed a printed photograph.
+- A printed photograph was photographed again
+- Visible paper edges, surrounding surface, perspective distortion,
+  glare, reflections, or shadows around the printed photograph
 
 SCREEN_CAPTURE
-- Phone screen
-- Monitor
-- Tablet
-- Screenshot
+- Photo displayed on or photographed from a phone, tablet, or monitor
+- Visible screen edges, pixels, moire, glare, interface, or device frame
+- Screenshot of another photo
 
 UNCERTAIN
-- Cannot determine confidently.
+- Cannot determine confidently
+
+Do not classify a clean original digital portrait as printed or screen-based
+without visible evidence. When evidence is ambiguous, return UNCERTAIN.
               `.trim(),
             },
             {
@@ -128,11 +138,20 @@ UNCERTAIN
       },
     });
 
-    const parsed = JSON.parse(response.output_text);
+    let parsed: unknown = null;
+
+    try {
+      parsed = JSON.parse(response.output_text);
+    } catch {
+      console.error(
+        "SOURCE PHOTO CHECK INVALID JSON:",
+        response.output_text
+      );
+    }
 
     return NextResponse.json(normalize(parsed));
-  } catch (err) {
-    console.error(err);
+  } catch (error) {
+    console.error("SOURCE PHOTO CHECK ERROR:", error);
 
     return NextResponse.json(
       {

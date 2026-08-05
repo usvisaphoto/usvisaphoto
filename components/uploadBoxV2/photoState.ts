@@ -1,6 +1,7 @@
 export const photoStateScript = String.raw`
 const PHOTO_STATE_KEY = 'usvisa_photo_state';
 const CREATED_PHOTO_FINGERPRINT_KEY = 'usvisa_created_photo_fingerprint';
+const AUTO_DETECT_VERSION = 2;
 
 function getPhotoState() {
   try {
@@ -148,7 +149,8 @@ function getStoredAutoDetectResult(fingerprint) {
 
   if (
     !result ||
-    result.fingerprint !== fingerprint
+    result.fingerprint !== fingerprint ||
+    result.detectorVersion !== AUTO_DETECT_VERSION
   ) {
     return null;
   }
@@ -165,7 +167,8 @@ function saveAutoDetectResult(result) {
     fingerprint: result.fingerprint,
     autoDetectResult: Object.assign(
       {
-        savedAt: Date.now()
+        savedAt: Date.now(),
+        detectorVersion: AUTO_DETECT_VERSION
       },
       result
     )
@@ -195,6 +198,16 @@ function saveAutoDetectRecoverable(fingerprint, detection, message) {
     status: 'recoverable',
     detection: detection || null,
     message: message || ''
+  });
+}
+
+function saveAutoDetectExpertOnly(fingerprint, detection, message, source) {
+  return saveAutoDetectResult({
+    fingerprint: fingerprint,
+    status: 'expert-only',
+    detection: detection || null,
+    message: message || '',
+    source: source || 'UNCERTAIN'
   });
 }
 
