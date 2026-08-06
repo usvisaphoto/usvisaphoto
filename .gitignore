@@ -10,6 +10,31 @@
 !.yarn/releases
 !.yarn/versions
 
+# Local caches
+.npm-cache/
+.next/
+node_modules/
+
+# Vercel local data
+.vercel/
+.vercel-local-appdata/
+.vercel-login.err
+.vercel-login.out
+
+# Local environment
+.env.local
+.env*.local
+
+# Logs
+*.log
+dev-security.err.log
+dev-security.out.log
+dev-server*.log
+
+# Temporary and test files
+.test-eyebrow.png
+*.zip
+
 # testing
 /coverage
 
@@ -35,6 +60,11 @@ yarn-error.log*
 
 # vercel
 .vercel
+
+# Local/private files
+.env.local
+*.txt
+video-work/
 
 # typescript
 *.tsbuildinfo

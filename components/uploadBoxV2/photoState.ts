@@ -1,7 +1,8 @@
 export const photoStateScript = String.raw`
 const PHOTO_STATE_KEY = 'usvisa_photo_state';
 const CREATED_PHOTO_FINGERPRINT_KEY = 'usvisa_created_photo_fingerprint';
-const AUTO_DETECT_VERSION = 2;
+const AUTO_DETECT_VERSION = 11;
+const VALIDATION_RESULT_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
 function getPhotoState() {
   try {
@@ -150,7 +151,9 @@ function getStoredAutoDetectResult(fingerprint) {
   if (
     !result ||
     result.fingerprint !== fingerprint ||
-    result.detectorVersion !== AUTO_DETECT_VERSION
+    result.detectorVersion !== AUTO_DETECT_VERSION ||
+    !result.savedAt ||
+    Date.now() - result.savedAt > VALIDATION_RESULT_TTL_MS
   ) {
     return null;
   }
@@ -178,7 +181,7 @@ function saveAutoDetectResult(result) {
 function saveAutoDetectPass(fingerprint, detection, report) {
   return saveAutoDetectResult({
     fingerprint: fingerprint,
-    status: 'pass',
+    status: 'PASS',
     detection: detection || null,
     report: report || null
   });
@@ -187,27 +190,34 @@ function saveAutoDetectPass(fingerprint, detection, report) {
 function saveAutoDetectDeny(fingerprint, message) {
   return saveAutoDetectResult({
     fingerprint: fingerprint,
-    status: 'deny',
+    status: 'DENY',
     message: message || ''
   });
 }
 
-function saveAutoDetectRecoverable(fingerprint, detection, message) {
+function saveAutoDetectReview(fingerprint, detection, message, evidence) {
   return saveAutoDetectResult({
     fingerprint: fingerprint,
-    status: 'recoverable',
+    status: 'REVIEW',
     detection: detection || null,
-    message: message || ''
+    message: message || '',
+    evidence: evidence || null
   });
 }
 
 function saveAutoDetectExpertOnly(fingerprint, detection, message, source) {
   return saveAutoDetectResult({
     fingerprint: fingerprint,
-    status: 'expert-only',
+    status: 'REVIEW',
     detection: detection || null,
     message: message || '',
     source: source || 'UNCERTAIN'
+  });
+}
+
+function saveAutoDetectRecoverable(fingerprint, detection, message) {
+  return saveAutoDetectReview(fingerprint, detection, message, {
+    recommendedAction: 'ERU'
   });
 }
 

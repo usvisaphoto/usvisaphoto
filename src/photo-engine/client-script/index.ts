@@ -9,3 +9,4 @@ export {
   appearanceValidationScript,
   detectedPhotoValidationScript,
 } from "./validation";
+export { alignmentCorrectionScript } from "./correction";

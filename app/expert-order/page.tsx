@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import {
   ChangeEvent,
   FormEvent,
@@ -289,9 +290,12 @@ export default function ExpertOrderPage() {
                 </button>
               ) : (
                 <div style={styles.previewBox}>
-                  <img
+                  <Image
                     src={previewUrl}
                     alt="Selected expert editing photo"
+                    width={900}
+                    height={900}
+                    unoptimized
                     style={styles.previewImage}
                   />
 

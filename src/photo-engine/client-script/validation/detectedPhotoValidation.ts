@@ -129,12 +129,17 @@ const alreadyCropped =
 
   score = Math.max(80, Math.min(100, score));
 
- const glassesDetected =
+const glassesDetected =
   Boolean(
     appearance &&
     appearance.glasses &&
     appearance.glasses.glassesDetected
   );
+const glassesReview = Boolean(
+  appearance &&
+  appearance.glasses &&
+  appearance.glasses.verdict === 'REVIEW'
+);
 
 const teethVisible =
   Boolean(
@@ -144,15 +149,12 @@ const teethVisible =
 
 let failureReason = null;
 
-if (
-  glassesDetected &&
-  teethVisible
-) {
+if (glassesDetected) {
   failureReason =
-    'glassesAndTeeth';
-} else if (glassesDetected) {
+    'glassesReview';
+} else if (glassesReview) {
   failureReason =
-    'glasses';
+    'glassesReview';
 } else if (
   teethVisible ||
   mouthResult.mouthOpened
@@ -223,6 +225,7 @@ if (
   return {
     pass: !failureReason,
     failureReason,
+    appearance,
     eyeResult,
     mouthResult,
     estimatedCrownY,

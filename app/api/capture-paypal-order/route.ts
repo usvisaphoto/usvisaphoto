@@ -79,8 +79,10 @@ function getProduct(
     requestedProduct ||
     "basic";
 
-  return VALID_PRODUCTS.has(capturedProduct as ProductType)
-    ? (capturedProduct as ProductType)
+  const normalizedProduct = capturedProduct.split("|")[0];
+
+  return VALID_PRODUCTS.has(normalizedProduct as ProductType)
+    ? (normalizedProduct as ProductType)
     : "basic";
 }
 

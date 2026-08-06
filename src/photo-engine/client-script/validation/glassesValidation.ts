@@ -1483,111 +1483,169 @@ const edgeBalance =
   );
 
 const balancedBilateralPattern =
-  candidateBalance >= 0.56 &&
-  edgeBalance >= 0.56;
-
-const confidence =
-  glassesClamp(
-    leftFrame.score * 0.38 +
-    rightFrame.score * 0.38 +
-    bridge.score * 0.24,
-    0,
-    1
-  );
+  candidateBalance >= 0.50 &&
+  edgeBalance >= 0.50;
 
 /*
- * V4 final decision:
- * 1) normal full-rim glasses can pass even when the nose bridge is faint,
- * 2) no-glasses false positives still require bilateral, symmetric frame evidence,
- * 3) thin or rimless glasses still require bridge evidence.
+ * 양쪽 프레임이 모두 검출되고,
+ * 콧등 브리지까지 검출될 때 안경으로 판정한다.
  */
-const strongFullRimPattern =
+const bilateralWithBridge =
   bilateralFrames &&
-  balancedBilateralPattern &&
-  leftFrame.detectedSegments >= 2 &&
-  rightFrame.detectedSegments >= 2 &&
-  leftFrame.topDetected &&
-  rightFrame.topDetected &&
-  leftFrame.outerDetected &&
-  rightFrame.outerDetected &&
-  leftFrame.score >= 0.48 &&
-  rightFrame.score >= 0.48 &&
-  confidence >= 0.50 &&
-  (
-    leftFrame.innerDetected ||
-    rightFrame.innerDetected ||
-    bridge.score >= 0.18
-  );
-
-const thinOrMetalFramePattern =
-  balancedBilateralPattern &&
-  leftFrame.detectedSegments >= 2 &&
-  rightFrame.detectedSegments >= 2 &&
-  leftFrame.outerDetected &&
-  rightFrame.outerDetected &&
-  leftFrame.score >= 0.44 &&
-  rightFrame.score >= 0.44 &&
-  bridge.score >= 0.62 &&
-  confidence >= 0.48;
-
-const veryStrongSymmetricPattern =
-  balancedBilateralPattern &&
-  leftFrame.detectedSegments >= 4 &&
-  rightFrame.detectedSegments >= 4 &&
-  leftFrame.outerDetected &&
-  rightFrame.outerDetected &&
-  leftFrame.innerDetected &&
-  rightFrame.innerDetected &&
-  leftFrame.score >= 0.60 &&
-  rightFrame.score >= 0.60 &&
-  confidence >= 0.58;
-
-
-  const highConfidenceBridgePattern =
   bridge.detected &&
-  bridge.score >= 0.70 &&
-  leftFrame.score >= 0.72 &&
-  rightFrame.score >= 0.72 &&
-  leftFrame.detectedSegments >= 2 &&
-  rightFrame.detectedSegments >= 2;
-
-
+  leftFrame.outerDetected &&
+  rightFrame.outerDetected;
 /*
- * 실제 안경 직접 판정
- *
- * 특정 테 구간이나 브리지가 누락되더라도,
- * 양쪽 눈에서 강한 프레임 증거가 동시에 확인되면
- * 실제 안경으로 판정한다.
+ * 얇은 금속테 보조 판정
+ * 브리지는 확실하고
+ * 양쪽 점수가 모두 어느 정도 이상이면 인정.
  */
-const directGlassesEvidence =
-  confidence >= 0.80 &&
-  leftFrame.score >= 0.72 &&
-  rightFrame.score >= 0.72 &&
+const thinMetalFrame =
   leftFrame.detectedSegments >= 2 &&
-  rightFrame.detectedSegments >= 2;
+  rightFrame.detectedSegments >= 2 &&
+  balancedBilateralPattern &&
+  leftFrame.score > 0.42 &&
+  rightFrame.score > 0.42 &&
+  (
+    bridge.detected ||
+    bridge.score > 0.22
+  ) &&
+  (
+    leftFrame.outerDetected ||
+    rightFrame.outerDetected
+  );
+/*
+ * 일반적인 두꺼운 안경
+ */
+const strongSymmetricPattern =
+  leftFrame.detectedSegments >= 3 &&
+  rightFrame.detectedSegments >= 3 &&
+  balancedBilateralPattern &&
+  leftFrame.score > 0.52 &&
+  rightFrame.score > 0.52 &&
+  bridge.score > 0.30 &&
+  leftFrame.outerDetected &&
+  rightFrame.outerDetected;
 
-const glassesDetected =
-  directGlassesEvidence ||
-  highConfidenceBridgePattern ||
-  strongFullRimPattern ||
-  thinOrMetalFramePattern ||
-  veryStrongSymmetricPattern;
-
-console.log("GLASSES RULES", {
-  directGlassesEvidence,
-  highConfidenceBridgePattern,
-  strongFullRimPattern,
-  thinOrMetalFramePattern,
-  veryStrongSymmetricPattern,
+console.log({
+  bilateralWithBridge,
+  thinMetalFrame,
+  strongSymmetricPattern,
   candidateBalance,
   edgeBalance,
-  confidence,
-  glassesDetected
+  balancedBilateralPattern
 });
 
+const glassesDetected =
+    bilateralWithBridge ||
+    thinMetalFrame ||
+    strongSymmetricPattern;
+
+ console.log("GLASSES RULES", {
+  bilateralWithBridge,
+  thinMetalFrame,
+  strongSymmetricPattern,
+});   
+
+  const confidence =
+    glassesClamp(
+      leftFrame.score *
+        0.38 +
+      rightFrame.score *
+        0.38 +
+      bridge.score *
+        0.24,
+      0,
+      1
+    );
+
+  const templeEvidence =
+    leftFrame.outerDetected && rightFrame.outerDetected;
+  const frameEvidence =
+    bilateralFrames || thinMetalFrame || strongSymmetricPattern;
+  const bridgeEvidence = bridge.detected || bridge.score > 0.30;
+  const reflectionEvidence =
+    leftFrame.averageEdgeRatio > 0.18 &&
+    rightFrame.averageEdgeRatio > 0.18 &&
+    edgeBalance >= 0.45;
+  const evidenceCount = [
+    templeEvidence,
+    frameEvidence,
+    bridgeEvidence,
+    reflectionEvidence
+  ].filter(Boolean).length;
+  const bilateralLowContrastFrame =
+    leftFrame.detectedSegments >= 1 &&
+    rightFrame.detectedSegments >= 1 &&
+    candidateBalance >= 0.30 &&
+    edgeBalance >= 0.30 &&
+    bridge.score >= 0.12;
+  /*
+   * 실제 업로드 샘플에서 얇고 밝은 금속테는 frameDetected/outerDetected가
+   * false여도 양쪽 눈에서 2개 이상의 연속 구간과 강한 브리지 점수가
+   * 반복해서 나타났다. 이 조합은 PASS시키지 않고 안전하게 REVIEW로 보낸다.
+   */
+  const bilateralEyewearSignature =
+    leftFrame.detectedSegments >= 2 &&
+    rightFrame.detectedSegments >= 2 &&
+    leftFrame.score >= 0.40 &&
+    rightFrame.score >= 0.40 &&
+    bridge.score >= 0.32 &&
+    confidence >= 0.40;
+  const subtleBilateralEyewearSignature =
+    leftFrame.score >= 0.30 &&
+    rightFrame.score >= 0.30 &&
+    confidence >= 0.34 &&
+    bridge.score >= 0.24 &&
+    (
+      templeEvidence ||
+      reflectionEvidence
+    );
+  const bridgeCorroborated =
+    bridge.detected || bridge.score >= 0.28;
+  const bridgeIndependentEvidence =
+    templeEvidence && reflectionEvidence && frameEvidence;
+  const needsEyewearReview =
+    bridgeIndependentEvidence ||
+    bilateralEyewearSignature ||
+    subtleBilateralEyewearSignature ||
+    (
+      bridgeCorroborated &&
+      (
+        (evidenceCount >= 2 && confidence >= 0.32) ||
+        (
+          bilateralLowContrastFrame &&
+          confidence >= 0.32
+        ) ||
+        (
+          leftFrame.score >= 0.40 &&
+          rightFrame.score >= 0.40 &&
+          Math.min(candidateBalance, edgeBalance) >= 0.45 &&
+          confidence >= 0.36
+        )
+      )
+    );
+  const verdict = glassesDetected || needsEyewearReview
+    ? 'REVIEW'
+    : 'PASS';
+
   const result = {
-    glassesDetected,
+    glassesDetected: verdict !== 'PASS',
+    verdict,
     confidence,
+    evidenceCount,
+    evidence: {
+      temple: templeEvidence,
+      bridge: bridgeEvidence,
+      frame: frameEvidence,
+      reflection: reflectionEvidence,
+      lowContrastBilateralFrame: bilateralLowContrastFrame,
+      bilateralEyewearSignature,
+      subtleBilateralEyewearSignature,
+      bridgeCorroborated,
+      bridgeIndependentEvidence,
+      bilateralBalance: Number(Math.min(candidateBalance, edgeBalance).toFixed(3))
+    },
 
     leftEyeScore:
       leftFrame.score,

@@ -44,7 +44,7 @@ const PROFESSIONAL_PHOTO_SPECS = Object.freeze({
    * 32 ÷ 30 = 약 1.0667
    * 32 × 1.0667 = 약 34.13mm
    */
-  headLengthMm: 34.13,
+  headLengthMm: 28,
 
   topMarginMm: 5.5,
 
@@ -52,9 +52,28 @@ const PROFESSIONAL_PHOTO_SPECS = Object.freeze({
 
   jpegQuality: 0.99,
 }),
+  '35x45': Object.freeze({ width:413,height:531,physicalHeightMm:45,headLengthMm:28,topMarginMm:4,shoulderExpandRatio:1,jpegQuality:.99 }),
+  '2x2': Object.freeze({ width:600,height:600,physicalHeightMm:50.8,headLengthMm:28,topMarginMm:5,shoulderExpandRatio:1,jpegQuality:.99 }),
+  // Korean 3 × 4cm half-name-card portrait: the face occupies about one
+  // third of the full photo height so considerably more upper body remains.
+  '30x40': Object.freeze({ width:354,height:472,physicalHeightMm:40,headLengthMm:13.3,topMarginMm:4,shoulderExpandRatio:1,jpegQuality:.99 }),
+  '20x30': Object.freeze({ width:236,height:354,physicalHeightMm:30,headLengthMm:22,topMarginMm:3,shoulderExpandRatio:1,jpegQuality:.99 }),
+  '40x60': Object.freeze({ width:472,height:709,physicalHeightMm:60,headLengthMm:34,topMarginMm:5,shoulderExpandRatio:1,jpegQuality:.99 }),
 });
 
 function getProfessionalPhotoSpec(format) {
+  if (format === 'country-default') {
+    const profile = window.EMBASSY_PHOTO_PROFILE || {};
+    return {
+      width: Number(profile.pixelWidth || 600),
+      height: Number(profile.pixelHeight || 600),
+      physicalHeightMm: Number(profile.heightMm || 50.8),
+      headLengthMm: Number(profile.headHeightMm || 28),
+      topMarginMm: Number(profile.topMarginMm || 5),
+      shoulderExpandRatio: 1,
+      jpegQuality: .99,
+    };
+  }
   const spec =
     PROFESSIONAL_PHOTO_SPECS[format];
 

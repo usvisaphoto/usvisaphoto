@@ -14,9 +14,10 @@ import {
   glassesValidationScript,
   appearanceValidationScript,
   detectedPhotoValidationScript,
+  alignmentCorrectionScript,
 } from "@/src/photo-engine/client-script";
 
-export const uploadBoxHtmlV2 = String.raw`
+export const embassyValidationHtmlV3 = String.raw`
 <!DOCTYPE html>
 <html>
 <head>
@@ -40,6 +41,7 @@ ${poseValidationLogic}
 ${glassesValidationScript}
 ${appearanceValidationScript}
 ${detectedPhotoValidationScript}
+${alignmentCorrectionScript}
 ${photoStateScript}
 ${professionalPhotoLayoutLogic}
 ${uploadBoxLogic}

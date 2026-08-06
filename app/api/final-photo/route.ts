@@ -1,50 +1,46 @@
 import { NextRequest, NextResponse } from 'next/server';
 import sharp from 'sharp';
-import { applyBasicColorEngine } from '@/lib/color-engine';
+import { validateImageUpload } from '@/lib/server/image-upload';
 
 export const runtime = 'nodejs';
 
-const US_WIDTH = 600;
-const US_HEIGHT = 600;
+const PHOTO_FORMATS = {
+  us: { width: 600, height: 600, filename: 'us_passport_photo_2x2.jpg' },
+  kr: { width: 413, height: 531, filename: 'korea_passport_photo_35x45mm.jpg' },
+  jp: { width: 413, height: 531, filename: 'japan_passport_photo_35x45mm.jpg' },
+  cn: { width: 390, height: 567, filename: 'china_passport_photo_33x48mm.jpg' },
+  ca: { width: 591, height: 827, filename: 'canada_passport_photo_50x70mm.jpg' },
+  in: { width: 413, height: 531, filename: 'india_passport_photo_35x45mm.jpg' },
+  vn: { width: 472, height: 709, filename: 'vietnam_passport_photo_40x60mm.jpg' },
+  other: { width: 413, height: 531, filename: 'international_passport_photo_35x45mm.jpg' },
+  tr: { width: 591, height: 709, filename: 'turkiye_passport_photo_50x60mm.jpg' },
+  my: { width: 413, height: 591, filename: 'malaysia_passport_photo_35x50mm.jpg' },
+  hk: { width: 472, height: 591, filename: 'hong_kong_passport_photo_40x50mm.jpg' },
+  fi: { width: 500, height: 653, filename: 'finland_passport_photo_500x653.jpg' },
+  ar: { width: 472, height: 472, filename: 'argentina_consular_photo_40x40mm.jpg' },
+  international: { width: 413, height: 531, filename: 'international_visa_photo_35x45mm.jpg' },
+} as const;
 
-/*
- * 3.5 × 4.5cm at 300 DPI
- *
- * 3.5cm ÷ 2.54 × 300 ≈ 413px
- * 4.5cm ÷ 2.54 × 300 ≈ 531px
- */
-const INTERNATIONAL_WIDTH = 413;
-const INTERNATIONAL_HEIGHT = 531;
-
-type PhotoFormat = 'us' | 'international';
+type PhotoFormat = keyof typeof PHOTO_FORMATS;
 
 function getPhotoFormat(
   value: FormDataEntryValue | null
 ): PhotoFormat {
-  return value === 'international'
-    ? 'international'
-    : 'us';
+  const normalized = String(value ?? 'us').toLowerCase();
+  return normalized in PHOTO_FORMATS ? normalized as PhotoFormat : 'us';
 }
 
 export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData();
 
-    const image = formData.get('image');
+    const validation = validateImageUpload(formData.get('image'));
     const format = getPhotoFormat(
       formData.get('format')
     );
 
-    if (!(image instanceof File)) {
-      return NextResponse.json(
-        {
-          error: 'No image file provided.',
-        },
-        {
-          status: 400,
-        }
-      );
-    }
+    if (!validation.ok) return NextResponse.json({ error: validation.error }, { status: validation.status });
+    const image = validation.file;
 
     const buffer = Buffer.from(
       await image.arrayBuffer()
@@ -57,24 +53,55 @@ export async function POST(req: NextRequest) {
      * 클라이언트의 photo layout engine에서
      * 이미 완성된 상태로 전달되어야 한다.
      */
-    const targetWidth =
-      format === 'international'
-        ? INTERNATIONAL_WIDTH
-        : US_WIDTH;
+    const { width: targetWidth, height: targetHeight, filename } = PHOTO_FORMATS[format];
 
-    const targetHeight =
-      format === 'international'
-        ? INTERNATIONAL_HEIGHT
-        : US_HEIGHT;
+    const sourceMetadata = await sharp(buffer).metadata();
+    const sourceWidth = sourceMetadata.width;
+    const sourceHeight = sourceMetadata.height;
 
-    const filename =
-      format === 'international'
-        ? 'international_visa_photo_35x45mm.jpg'
-        : 'us_visa_photo.jpg';
+    if (!sourceWidth || !sourceHeight) {
+      throw new Error('Final photo dimensions are unavailable.');
+    }
 
-    const colorCorrectedBuffer = await applyBasicColorEngine(buffer);
+    /*
+     * Preserve canvas pixels that were already pure/near white before global
+     * color correction. The color engine intentionally adjusts the subject,
+     * but embassy background pixels must remain exact #FFFFFF.
+     */
+    const whiteBackgroundMask = await sharp(buffer)
+      .removeAlpha()
+      .greyscale()
+      .threshold(250)
+      .raw()
+      .toBuffer();
 
-    const output = await sharp(colorCorrectedBuffer)
+    const whiteOverlay = await sharp({
+      create: {
+        width: sourceWidth,
+        height: sourceHeight,
+        channels: 3,
+        background: { r: 255, g: 255, b: 255 },
+      },
+    })
+      .joinChannel(whiteBackgroundMask, {
+        raw: {
+          width: sourceWidth,
+          height: sourceHeight,
+          channels: 1,
+        },
+      })
+      .png()
+      .toBuffer();
+
+    /*
+     * Basic Photo must preserve the uploaded subject's original pixels and
+     * skin tone. Retouching belongs to Embassy-Ready Upgrade, not Basic.
+     */
+    const backgroundProtectedBuffer = await sharp(buffer)
+      .composite([{ input: whiteOverlay, blend: 'over' }])
+      .toBuffer();
+
+    const output = await sharp(backgroundProtectedBuffer)
       .resize(
         targetWidth,
         targetHeight,
@@ -88,6 +115,12 @@ export async function POST(req: NextRequest) {
           fit: 'fill',
         }
       )
+      /*
+       * Apply only a restrained output-size sharpen. Running it after resize
+       * restores a little edge clarity without changing skin tone, facial
+       * geometry, or introducing the crunchy halos of strong sharpening.
+       */
+      .sharpen({ sigma: 0.45 })
       .jpeg({
         quality: 98,
         chromaSubsampling: '4:4:4',

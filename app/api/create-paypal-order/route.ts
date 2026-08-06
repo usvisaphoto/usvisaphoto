@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getDownloadManifest } from "@/lib/server/secure-photo";
 
 export const runtime = "nodejs";
 
@@ -63,9 +64,13 @@ export async function POST(req: Request) {
   "https://usvisaphoto.app";
 
     let product: ProductType = "basic";
+    let securePhotoTokens: string[] = [];
 
     try {
       const body = await req.json();
+      securePhotoTokens = Array.isArray(body?.securePhotoTokens)
+        ? body.securePhotoTokens.filter((token: unknown) => typeof token === "string" && token.startsWith("v1.")).slice(0, 2)
+        : [];
 
       if (body?.product === "expert-international") {
   product = "expert-international";
@@ -112,6 +117,16 @@ export async function POST(req: Request) {
     value: "22.99",
   },
 }[product];
+    const isPhotoDownload = !product.startsWith("expert");
+    const expectedTokenCount = product.endsWith("-international") ? 2 : 1;
+
+    if (isPhotoDownload && securePhotoTokens.length !== expectedTokenCount) {
+      return NextResponse.json({ error: "Protected photo files are incomplete." }, { status: 400 });
+    }
+
+    const manifest = isPhotoDownload
+      ? getDownloadManifest(securePhotoTokens)
+      : "";
     const accessToken = await getAccessToken();
 
     const res = await fetch(
@@ -130,7 +145,7 @@ export async function POST(req: Request) {
             {
               description:
                 productConfig.description,
-              custom_id: product,
+              custom_id: manifest ? `${product}|${manifest}` : product,
               amount: {
                 currency_code: "USD",
                 value:

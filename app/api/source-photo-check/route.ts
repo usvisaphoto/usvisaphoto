@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
+import { enforceRateLimit } from "@/lib/server/rate-limit";
 
 export const runtime = "nodejs";
 
@@ -32,6 +33,8 @@ function normalize(value: unknown): SourceResult {
 }
 
 export async function POST(req: Request) {
+  const limited = enforceRateLimit(req, "source-photo-check", 15, 10 * 60_000);
+  if (limited) return limited;
   try {
     if (!process.env.OPENAI_API_KEY) {
       return NextResponse.json(
@@ -101,6 +104,7 @@ UNCERTAIN
 
 Do not classify a clean original digital portrait as printed or screen-based
 without visible evidence. When evidence is ambiguous, return UNCERTAIN.
+
               `.trim(),
             },
             {

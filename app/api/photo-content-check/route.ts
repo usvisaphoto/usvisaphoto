@@ -1,15 +1,13 @@
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
+import { enforceRateLimit } from "@/lib/server/rate-limit";
 
 export const runtime = "nodejs";
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
 
 type InspectionResult = {
   headwear: "HEADWEAR" | "NO_HEADWEAR" | "UNCERTAIN";
   overlay: "OVERLAY_DETECTED" | "NO_OVERLAY" | "UNCERTAIN";
+  eyewear: "GLASSES" | "NO_GLASSES" | "UNCERTAIN";
 };
 
 function normalizeInspectionResult(value: unknown): InspectionResult {
@@ -17,6 +15,7 @@ function normalizeInspectionResult(value: unknown): InspectionResult {
     return {
       headwear: "UNCERTAIN",
       overlay: "UNCERTAIN",
+      eyewear: "UNCERTAIN",
     };
   }
 
@@ -36,13 +35,23 @@ function normalizeInspectionResult(value: unknown): InspectionResult {
       ? result.overlay
       : "UNCERTAIN";
 
+  const eyewear =
+    result.eyewear === "GLASSES" ||
+    result.eyewear === "NO_GLASSES" ||
+    result.eyewear === "UNCERTAIN"
+      ? result.eyewear
+      : "UNCERTAIN";
+
   return {
     headwear,
     overlay,
+    eyewear,
   };
 }
 
 export async function POST(req: Request) {
+  const limited = enforceRateLimit(req, "photo-content-check", 15, 10 * 60_000);
+  if (limited) return limited;
   try {
     if (!process.env.OPENAI_API_KEY) {
       return NextResponse.json(
@@ -52,6 +61,7 @@ export async function POST(req: Request) {
         { status: 503 }
       );
     }
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
     const formData = await req.formData();
     const image = formData.get("image");
@@ -78,14 +88,24 @@ export async function POST(req: Request) {
             {
               type: "input_text",
               text: `
-Inspect this passport or visa photo source image for two separate conditions.
+Inspect this passport or visa photo source image for three separate conditions.
 
 Return JSON only in this exact structure:
 
 {
   "headwear": "HEADWEAR | NO_HEADWEAR | UNCERTAIN",
-  "overlay": "OVERLAY_DETECTED | NO_OVERLAY | UNCERTAIN"
+  "overlay": "OVERLAY_DETECTED | NO_OVERLAY | UNCERTAIN",
+  "eyewear": "GLASSES | NO_GLASSES | UNCERTAIN"
 }
+
+EYEWEAR RULES
+
+Use "GLASSES" whenever any prescription glasses, clear-lens glasses,
+fashion glasses, sunglasses, rimless glasses, thin metal frames, plastic frames,
+bridge, temples, lenses, or lens reflections are visible on the face.
+Clear lenses and very thin frames still count as glasses.
+Use "NO_GLASSES" only when the eyes, nose bridge, and temples are clearly visible
+without any eyewear. Use "UNCERTAIN" only when blur or obstruction prevents a decision.
 
 HEADWEAR RULES
 
@@ -175,8 +195,12 @@ superimposed watermark, preview mark, or graphic is clearly visible.
                   "UNCERTAIN",
                 ],
               },
+              eyewear: {
+                type: "string",
+                enum: ["GLASSES", "NO_GLASSES", "UNCERTAIN"],
+              },
             },
-            required: ["headwear", "overlay"],
+            required: ["headwear", "overlay", "eyewear"],
           },
         },
       },
@@ -202,6 +226,7 @@ superimposed watermark, preview mark, or graphic is clearly visible.
       status: inspection.headwear,
       headwearStatus: inspection.headwear,
       overlayStatus: inspection.overlay,
+      eyewearStatus: inspection.eyewear,
     });
   } catch (error) {
     console.error("PHOTO CONTENT CHECK ERROR:", error);

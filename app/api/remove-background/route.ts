@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server";
+import { fetchWithTimeout, validateImageUpload } from "@/lib/server/image-upload";
+import { enforceRateLimit } from "@/lib/server/rate-limit";
 
 export const runtime = "nodejs";
 
 export async function POST(req: Request) {
+  const limited = enforceRateLimit(req, "remove-background", 12, 10 * 60_000);
+  if (limited) return limited;
   try {
     const apiKey = process.env.PHOTOROOM_API_KEY;
 
@@ -14,23 +18,21 @@ export async function POST(req: Request) {
     }
 
     const incomingForm = await req.formData();
-    const image = incomingForm.get("image");
-
-    if (!(image instanceof File)) {
-      return NextResponse.json({ error: "No image uploaded" }, { status: 400 });
-    }
+    const validation = validateImageUpload(incomingForm.get("image"));
+    if (!validation.ok) return NextResponse.json({ error: validation.error }, { status: validation.status });
+    const image = validation.file;
 
     const photoRoomForm = new FormData();
     photoRoomForm.append("image_file", image, image.name || "photo.jpg");
     photoRoomForm.append("format", "png");
 
-    const photoRoomRes = await fetch("https://sdk.photoroom.com/v1/segment", {
+    const photoRoomRes = await fetchWithTimeout("https://sdk.photoroom.com/v1/segment", {
       method: "POST",
       headers: {
         "x-api-key": apiKey,
       },
       body: photoRoomForm,
-    });
+    }, 90_000);
 
     if (!photoRoomRes.ok) {
       const errorText = await photoRoomRes.text();
@@ -40,7 +42,7 @@ export async function POST(req: Request) {
         {
           error: "PhotoRoom API error",
           status: photoRoomRes.status,
-          detail: errorText,
+          requestId: photoRoomRes.headers.get("x-request-id") || undefined,
         },
         { status: photoRoomRes.status }
       );

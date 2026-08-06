@@ -1,9 +1,13 @@
 export const uploadBoxStyles = String.raw`
+.eru-progress{margin-top:14px;padding:14px;border:1px solid #bfdbfe;border-radius:14px;background:#eff6ff;color:#1e3a8a}
+.eru-progress[hidden]{display:none}.eru-progress-copy{display:flex;justify-content:space-between;gap:12px;font-size:13px;font-weight:800}
+.eru-progress-track{height:9px;margin:10px 0;overflow:hidden;border-radius:999px;background:#dbeafe}.eru-progress-bar{width:0;height:100%;border-radius:inherit;background:linear-gradient(90deg,#2563eb,#06b6d4);transition:width .35s ease}
+.eru-progress small{display:block;color:#475569;line-height:1.45}
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{width:100%;height:100%;background:#f8fafc;font-family:system-ui}
 .wrap{width:100%;height:100%;padding:0}
 .upload-zone{
-  position:relative;width:100%;height:320px;border:2px dashed #bfdbfe;border-radius:16px;
+  position:relative;width:100%;height:640px;border:2px dashed #bfdbfe;border-radius:20px;
   background:#f8fafc;overflow:hidden;display:flex;align-items:center;justify-content:center;cursor:pointer;
 }
 .upload-zone input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;z-index:5}
@@ -68,7 +72,7 @@ button{flex:1;border:0;border-radius:14px;padding:13px 10px;font-size:14px;font-
   z-index:1;
   width:100%;
   height:auto;
-  max-height:600px;
+  max-height:none;
   object-fit:contain;
   border-radius:16px;
   background:white;
@@ -606,6 +610,61 @@ button{flex:1;border:0;border-radius:14px;padding:13px 10px;font-size:14px;font-
   opacity:.65;
   cursor:not-allowed;
   transform:none;
+}
+.download-spec{
+  display:grid;
+  gap:4px;
+  margin-top:12px;
+  padding:11px 12px;
+  border:1px solid #cbdcf5;
+  border-radius:13px;
+  background:#f8fbff;
+  color:#334155;
+  font-size:10px;
+  line-height:1.45;
+}
+.download-spec strong{
+  color:#0f2f6f;
+  font-size:11px;
+  font-weight:900;
+}
+.download-spec span{display:block}
+.download-spec-extra{
+  padding-top:4px;
+  border-top:1px solid #e2e8f0;
+}
+.download-spec-eru{
+  border-color:#fde1a7;
+  background:#fffdf7;
+}
+
+/* KR/JP/CN keep their exact output pixels and physical proportions; only the
+   protected on-screen preview is intentionally calmer and smaller. */
+.compact-east-asia-preview .result-canvas-wrap{
+  width:60%;
+}
+.compact-east-asia-preview #retouch-image{
+  width:60%;
+}
+.compact-east-asia-preview .result-badge{
+  top:9px;
+  left:9px;
+  padding:7px 9px;
+  border-radius:10px;
+}
+.compact-east-asia-preview .badge-title{font-size:10px}
+.compact-east-asia-preview .badge-subtitle{font-size:9px}
+
+.size-picker{margin-top:12px;padding:12px;border:1px solid #dbe7f8;border-radius:18px;background:linear-gradient(180deg,#fff 0%,#f8fbff 100%)}
+.default-size-card{display:grid;grid-template-columns:1fr auto;gap:3px 12px;padding:12px 14px;border-radius:14px;background:#102d63;color:#fff;box-shadow:0 10px 24px rgba(16,45,99,.14)}
+.default-size-card>span{grid-column:1/-1;font-size:9px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:#bfdbfe}.default-size-card strong{font-size:13px}.default-size-card small{font-size:11px;color:#dbeafe}
+.size-picker-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:14px 2px 8px;color:#334155;font-size:11px}.size-picker-heading strong{font-size:12px;color:#102d63}.size-picker-heading span{color:#64748b}
+.size-option-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.size-option{position:relative;display:flex;align-items:center;justify-content:center;min-height:42px;padding:8px 9px;border:1px solid #d8e2f0;border-radius:12px;background:#fff;color:#334155;font-size:11px;font-weight:800;text-align:center;cursor:pointer;transition:.18s ease}.size-option:hover{border-color:#7fa7ea;transform:translateY(-1px)}.size-option:has(input:checked){border-color:#2563eb;background:#eaf2ff;color:#123d87;box-shadow:0 6px 14px rgba(37,99,235,.12)}.size-option input{position:absolute;opacity:0;pointer-events:none}.size-option-none{grid-column:1/-1}.size-picker-professional{margin:12px 0 4px;border-color:#fde68a;background:rgba(255,255,255,.7)}
+.eyebrow-clearance-note{display:none;margin-top:9px;padding:9px 11px;border-radius:11px;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;font-size:10px;font-weight:700;line-height:1.45}
+@media (min-width:520px){.size-option-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.size-option-none{grid-column:auto}}
+
+@media (max-width: 420px){
+  .upload-zone{height:360px}
 }
 
 `;

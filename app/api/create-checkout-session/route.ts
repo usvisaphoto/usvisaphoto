@@ -3,10 +3,16 @@ import Stripe from "stripe";
 
 export const runtime = "nodejs";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
-
 export async function POST(req: Request) {
   try {
+    const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+    if (!stripeSecretKey) {
+      return NextResponse.json(
+        { error: "Checkout is temporarily unavailable." },
+        { status: 503 }
+      );
+    }
+    const stripe = new Stripe(stripeSecretKey);
     const origin = req.headers.get("origin") || "http://localhost:3000";
 
     const session = await stripe.checkout.sessions.create({

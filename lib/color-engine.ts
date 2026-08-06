@@ -3,22 +3,14 @@ import sharp from 'sharp';
 const ANALYSIS_SIZE = 192;
 const MIN_ANALYSIS_PIXELS = 500;
 
-/*
- * Basic Photo policy:
- * - Never increase exposure.
- * - Preserve normally exposed and dark photos.
- * - Only reduce obvious overexposure by up to 3%.
- * - Do not apply contrast or white-balance gain.
- */
 const TARGET_MEDIAN_LUMINANCE = 128;
+const MIN_BRIGHTNESS = 0.94;
+const MAX_BRIGHTNESS = 1.08;
 
-const MIN_BRIGHTNESS = 0.97;
-const MAX_BRIGHTNESS = 1.0;
+const MIN_WHITE_BALANCE_GAIN = 0.97;
+const MAX_WHITE_BALANCE_GAIN = 1.03;
 
-const MIN_WHITE_BALANCE_GAIN = 1.0;
-const MAX_WHITE_BALANCE_GAIN = 1.0;
-
-const MILD_CONTRAST = 1.0;
+const MILD_CONTRAST = 1.02;
 
 type ColorAnalysis = {
   brightness: number;

@@ -18,6 +18,12 @@ Create a visibly superior Professional Retouch version through:
 The improvement must come from professional retouching and pose correction,
 not from facial reconstruction or generating a different person.
 
+EYEWEAR POLICY
+
+- Follow the destination-specific eyewear policy appended to this prompt.
+- Never change the subject's eye shape, iris position, eyebrows, nose,
+  facial proportions, expression, or identity while following that policy.
+
 STRICT IDENTITY LOCK
 
 - Preserve the exact same person.
@@ -37,6 +43,12 @@ HEAD, CHIN, NECK, AND BODY ALIGNMENT
 - Do not correct body alignment by shifting the entire subject left or right.
 - Do not move the entire portrait merely to compensate for uneven shoulders.
 - Position the neck naturally and directly beneath the chin.
+- Measure the visible frontal jaw width from the left jaw edge to the right jaw edge.
+- Set the visible neck width immediately below the jaw to approximately five-ninths (5/9, about 55.6%) of that jaw width.
+- Apply this neck-width ratio symmetrically around the existing neck centerline.
+- Transition gradually from below the jaw into the lower neck and collar so there is no pinching, hourglass shape, hard edge, or anatomical distortion.
+- If an exact 5/9 ratio would look anatomically unnatural for the subject, stay as close as naturally possible while preserving identity and realistic anatomy.
+- Do not change the jaw width, jawline, chin, face width, head size, or facial bone structure to achieve the neck ratio.
 - Correct minor upper-body rotation only when necessary.
 - Preserve the original head size.
 - Preserve the original crown-to-chin length.
@@ -116,6 +128,16 @@ SKIN
 - Do not change visible age characteristics.
 - Do not remove all natural facial lines.
 
+EYES, NASOLABIAL FOLDS, AND EYEBROWS
+
+- Reduce visible bloodshot redness in the whites of both eyes while preserving natural off-white sclera tone, veins that are normally subtle, iris color, pupil, gaze, eyelids, and eye shape.
+- Never make the eye whites unnaturally bright, blue-white, glowing, flat, or artificial.
+- Compare the left and right nasolabial folds. Only when one side is visibly deeper or darker, soften that stronger side to approximately match the naturally lighter side.
+- Preserve the lighter nasolabial fold as the reference. Do not erase both folds and do not remove normal facial structure or expression.
+- If an eyebrow has small sparse or missing patches, fill only those gaps with a minimal number of realistic individual hairs matching the existing eyebrow color, thickness, direction, density, and texture.
+- Preserve the original eyebrow outline, arch, length, spacing, height, and asymmetry. Do not thicken, darken, reshape, extend, lift, or redesign either eyebrow.
+- Skip any of these corrections when the issue is not visibly present.
+
 HAIR
 
 - Preserve the exact original hairstyle.
@@ -140,17 +162,24 @@ BACKGROUND
 - Keep the background evenly lit.
 - Do not add gradients, shadows, textures, objects, or color contamination.
 
-VERY SUBTLE FACIAL REFINEMENT
+CONTROLLED SYMMETRIC CHEEK REFINEMENT
 
-- Apply only a very subtle natural slimming effect to the lower cheeks and jawline.
-- Limit the apparent slimming to approximately 2–3% maximum.
+- On each side independently, measure the horizontal visible space from the outer corner of the eye to the inner edge of the ear on that same side.
+- Reduce only the soft cheek width occupying each eye-to-ear interval by approximately one-third (33.3%).
+- Apply the same proportional reduction to the left and right cheeks so both sides remain balanced.
+- Keep both eyes and both ears completely locked: do not change their shape, size, angle, height, spacing, position, or texture.
+- Keep the pupils, eyelids, eyebrows, temples, ear contours, ear lobes, and hair around the ears unchanged.
+- Confine the transformation to the soft lateral cheek tissue between each outer eye and corresponding ear.
+- Do not move the eyes or ears inward or outward to simulate the reduction.
+- Do not modify the jawline, jaw angle, chin, cheekbones, mouth, nose, or facial length.
 - Preserve the exact identity and facial bone structure.
 - Preserve chin shape, chin length, cheekbone position, and natural facial proportions.
 - Do not create a V-line face.
 - Do not sharpen or lengthen the chin.
 - Do not hollow the cheeks.
+- Do not create visible contouring, shadows, pinching, warping, or an edited appearance.
 - Do not change the apparent age, weight, ethnicity, or identity.
-- If any slimming would risk changing identity, do not apply it.
+- If the full one-third reduction would create pinching, concavity, broken anatomy, or a visibly synthetic result, use the closest natural reduction possible while keeping the requested eye and ear locks absolute.
 
 COMPOSITION
 
@@ -224,21 +253,4 @@ QUALITY PRIORITY (Highest to Lowest)
 10. Preserve realistic skin and hair texture.
 
 The Professional Retouch must look immediately better than the Basic Photo at first glance while still looking like the exact same person.
-`;
-
-export const GLASSES_REMOVAL_PROMPT = `
-
-GLASSES REMOVAL — APPLY ONLY WHEN REQUESTED
-
-GLASSES REMOVAL IS THE HIGHEST-PRIORITY EDIT FOR THIS REQUEST.
-The final photograph must clearly show the same person naturally photographed without wearing glasses.
-Do not return an image with any visible glasses or frame remnants.
-
-- Remove the eyeglasses completely, including both lenses, all frame rims, bridge, nose pads, hinges, temples, shadows, reflections, glare, and residual artifacts.
-- Restore the exact natural eye area behind the glasses.
-- Preserve the subject's original eye size, shape, spacing, eyelids, iris direction, eyebrows, nose bridge, skin texture, age, ethnicity, and identity.
-- Do not beautify, enlarge, reshape, symmetrize, or redesign the eyes.
-- Reconstruct only details actually obscured by the glasses and keep all visible original details unchanged.
-- The result must look like the same person naturally photographed without glasses, not a generated or altered identity.
-- Keep a neutral expression and an embassy-appropriate realistic finish.
 `;

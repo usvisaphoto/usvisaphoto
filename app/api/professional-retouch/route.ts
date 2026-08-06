@@ -1,15 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI, { toFile } from "openai";
-import {
-  PROFESSIONAL_RETOUCH_PROMPT,
-  GLASSES_REMOVAL_PROMPT,
-} from "@/lib/prompts/professionalRetouch";
+import { PROFESSIONAL_RETOUCH_PROMPT } from "@/lib/prompts/professionalRetouch";
+import { fetchWithTimeout, validateImageUpload } from "@/lib/server/image-upload";
+import { enforceRateLimit } from "@/lib/server/rate-limit";
 
 export const runtime = "nodejs";
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
 
 type ImageEditResultPayload = {
   data?: Array<{
@@ -26,6 +21,8 @@ type ImageEditResultPayload = {
 };
 
 export async function POST(req: NextRequest) {
+  const limited = enforceRateLimit(req, "professional-retouch", 4, 10 * 60_000);
+  if (limited) return limited;
   try {
     if (!process.env.OPENAI_API_KEY) {
       return NextResponse.json(
@@ -37,37 +34,14 @@ export async function POST(req: NextRequest) {
         }
       );
     }
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
     const formData = await req.formData();
-    const image = formData.get("image");
-    const removeGlasses = formData.get("removeGlasses") === "true";
-
-    console.log(
-      "PROFESSIONAL REMOVE GLASSES:",
-      removeGlasses
-    );
-
-    if (!(image instanceof File)) {
-      return NextResponse.json(
-        {
-          error: "Image file is required.",
-        },
-        {
-          status: 400,
-        }
-      );
-    }
-
-    if (!image.type.startsWith("image/")) {
-      return NextResponse.json(
-        {
-          error: "The uploaded file must be an image.",
-        },
-        {
-          status: 400,
-        }
-      );
-    }
+    const eyebrowClearanceRequired = formData.get("eyebrowClearanceRequired") === "true";
+    const removeEyewearRequired = formData.get("removeEyewearRequired") === "true";
+    const validation = validateImageUpload(formData.get("image"));
+    if (!validation.ok) return NextResponse.json({ error: validation.error }, { status: validation.status });
+    const image = validation.file;
 
     const buffer = Buffer.from(
       await image.arrayBuffer()
@@ -81,30 +55,42 @@ export async function POST(req: NextRequest) {
       }
     );
 
-    console.log("===== BEFORE OPENAI =====");
-    console.time("OPENAI");
-
     const response = await openai.images.edit({
       model: "gpt-image-2",
       image: openaiFile,
-      prompt: removeGlasses
-        ? [
-            GLASSES_REMOVAL_PROMPT,
-            "",
-            "The glasses-removal instructions above are mandatory and have the highest priority.",
-            "The returned photograph must contain no eyeglasses, lenses, rims, bridge, nose pads, hinges, temples, reflections, shadows, glare, or frame remnants.",
-            "The final result must clearly look like the same person naturally photographed without glasses.",
-            "",
-            PROFESSIONAL_RETOUCH_PROMPT,
-          ].join("\n")
-        : PROFESSIONAL_RETOUCH_PROMPT,
+      prompt: PROFESSIONAL_RETOUCH_PROMPT + (removeEyewearRequired ? `
+
+DESTINATION EYEWEAR POLICY — REMOVE
+
+- Detect and remove all eyewear when present, including lenses, rims, bridge, nose pads, temples, shadows, glare, and reflections.
+- Reconstruct only the small areas physically hidden by the eyewear while preserving exact identity and eye and eyebrow geometry.
+- The finished image must contain no glasses or eyewear fragments.
+` : `
+
+DESTINATION EYEWEAR POLICY — PRESERVE
+
+- If the source photograph contains glasses, preserve those exact glasses completely.
+- Do not remove, replace, redesign, resize, recolor, straighten, relocate, or regenerate the lenses, rims, bridge, nose pads, or temples.
+- Preserve natural reflections and transparency unless a tiny lighting cleanup is required; never make the glasses disappear.
+- If the source has no glasses, do not add any.
+`) + (eyebrowClearanceRequired ? `
+
+KOREAN-STYLE EYEBROW CLEARANCE — REQUIRED
+
+- Both eyebrows must remain completely visible and must not overlap with bangs, fringe, stray hair, shadows, or reconstructed pixels.
+- Preserve each eyebrow's exact original outline, arch, length, thickness, spacing, height, hair direction, texture, color, and natural left-right asymmetry.
+- Do not redraw, lift, lower, darken, thicken, thin, extend, shorten, or beautify either eyebrow.
+- Preserve the exact original eyes, eyelids, forehead, hairline, head shape, and facial identity.
+- When hair overlaps an eyebrow, move or clean only the minimum individual overlapping hair strands away from the eyebrow boundary.
+- Keep the original hairstyle and overall fringe shape. Do not expose more forehead than necessary.
+- Do not erase real eyebrow hairs. Do not merge eyebrow hair with scalp hair.
+- The result must look naturally photographed, never cosmetically edited.
+` : ""),
       size: "1024x1024",
       quality: "medium",
       output_format: "png",
     });
 
-    console.timeEnd("OPENAI");
-    console.log("===== AFTER OPENAI =====");
 
     const resultPayload =
       response as unknown as ImageEditResultPayload;
@@ -144,7 +130,7 @@ export async function POST(req: NextRequest) {
       imageResult.startsWith("https://") ||
       imageResult.startsWith("http://")
     ) {
-      const imageResponse = await fetch(imageResult);
+      const imageResponse = await fetchWithTimeout(imageResult, {}, 30_000);
 
       if (!imageResponse.ok) {
         throw new Error(
@@ -163,11 +149,6 @@ export async function POST(req: NextRequest) {
         `data:image/png;base64,${imageResult}`;
     }
 
-    console.log(
-      "PROFESSIONAL PREVIEW LENGTH:",
-      professionalPreview.length
-    );
-
     return NextResponse.json({
       ok: true,
       professionalPreview,
@@ -183,10 +164,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(
       {
-        error:
-          error instanceof Error
-            ? error.message
-            : "Professional retouch failed.",
+        error: "Professional retouch is temporarily unavailable. Please try again.",
       },
       {
         status: 500,

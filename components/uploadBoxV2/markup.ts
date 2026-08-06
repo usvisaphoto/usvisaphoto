@@ -1,264 +1,78 @@
 export const uploadBoxMarkup = String.raw`
-<div class="wrap">
-  <div class="upload-zone" id="upload-zone">
-    <input type="file" id="file-input" accept="image/*" />
-    <div class="placeholder" id="placeholder">
-      <div class="icon">📷</div>
-      <p>Upload your photo</p>
-      <small>Selected photo appears here</small>
-    </div>
-    <img id="preview-img" alt="preview" />
+<main class="wrap">
+  <section class="upload-zone" id="upload-zone" aria-label="Photo upload">
+    <input type="file" id="file-input" accept="image/jpeg,image/png,image/webp" aria-label="Choose a portrait photo" />
+    <div class="placeholder" id="placeholder"><div class="icon" aria-hidden="true">↑</div><p>Upload your photo</p><small>JPEG, PNG, or WebP · Maximum 15 MB</small></div>
+    <img id="preview-img" alt="Your selected photo preview" />
     <div class="guide-line" id="crown-line"><span>Crown</span></div>
     <div class="guide-line" id="chin-line"><span>Chin</span></div>
-  </div>
+  </section>
 
-  <div class="actions">
+  <div class="actions" aria-label="Photo validation actions">
     <button id="detect-btn" type="button">Auto Detect</button>
-    <button id="create-btn" type="button">Create Photo</button>
+    <button id="create-btn" type="button" disabled>Create Photo</button>
   </div>
+  <button id="new-photo-btn" type="button" class="new-photo-btn">Choose another photo</button>
+  <p class="guide-note" id="guideNote">Upload a photo, then choose Auto Detect. Nothing runs automatically.</p>
 
-  <button id="new-photo-btn" type="button" class="new-photo-btn">
-    Choose Another Photo
-  </button>
+  <section id="validation-card" class="validation-card" style="display:none;" aria-live="polite">
+    <div class="validation-title">Embassy Photo Validation Report</div>
+    <div id="check-face" class="validation-row">Checking face…</div>
+    <div id="check-eyes" class="validation-row">Checking eyes…</div>
+    <div id="check-mouth" class="validation-row">Checking expression…</div>
+    <div id="check-glasses" class="validation-row">Checking eyewear…</div>
+    <div id="check-eyebrows" class="validation-row" style="display:none;">Checking eyebrow clearance...</div>
+    <div id="check-position" class="validation-row">Checking head position…</div>
+    <div id="validation-final" class="validation-final"></div>
+  </section>
 
-   
-  <div class="guide-note" id="guideNote">
-   Your photo has been automatically checked and is ready to create.
-  </div>
+  <div class="status" id="status" role="status">Upload a photo to begin</div>
+  <aside class="notice" id="uploadTips"><strong>For the best result</strong><br />Look directly at the camera, keep both eyes open, close your mouth, and remove glasses, hats, or head coverings.<br /><br />Need help? <a href="mailto:usvisaphoto1@gmail.com">Contact our photo team</a>.</aside>
 
-
-<div id="validation-card" class="validation-card" style="display:none;">
-  <div class="validation-title">Photo Validation Report</div>
-
-  <div id="check-face" class="validation-row">Checking face...</div>
-  <div id="check-eyes" class="validation-row">Checking eyes...</div>
-  <div id="check-mouth" class="validation-row">Checking mouth...</div>
-  <div id="check-glasses" class="validation-row">Checking glasses...</div>
-  <div id="check-position" class="validation-row">Checking head position...</div>
-
-  <div id="validation-final" class="validation-final"></div>
-</div>
-
-  <div class="status" id="status">Upload a photo first</div>
-
-  <div class="notice" id="uploadTips">
-    <strong>Before uploading:</strong><br>
-    Look directly at the camera · Keep both eyes open · Keep your mouth closed · Do not wear hats or sunglasses.
-    <br><br>
-    For special cases or manual review, contact:
-    <a href="mailto:usvisaphoto1@gmail.com">usvisaphoto1@gmail.com</a>
-  </div>
-
- <div id="expert-edit-card" class="expert-manual-card">
-
-  <div class="expert-service-badge">
-    PREMIUM MANUAL SERVICE
-  </div>
-
-  <div class="expert-title">
-    ⭐ 3. Expert Manual Editing
-  </div>
-
-  <div class="expert-subtitle">
-    Recommended when Auto Detect cannot approve your photo
-    or when you need to use your original photo without retaking it.
-  </div>
-
-  <div class="expert-highlight">
-    Every photo is personally reviewed, retouched, and checked
-    by an experienced photo specialist.
-  </div>
-
-  <div class="expert-features">
-    <div>✓ Manual review by a photo specialist</div>
-    <div>✓ U.S. embassy compliance assessment</div>
-    <div>✓ Natural professional retouch</div>
-    <div>✓ Hair and clothing refinement</div>
-    <div>✓ Priority Email or WhatsApp delivery</div>
-    <div>✓ Delivered within 24 hours</div>
-  </div>
-
-  <button id="expert-edit-btn" type="button">
-    <span class="expert-button-title">
-      🔓 Start Manual Editing
-    </span>
-
-    <span class="expert-button-price">
-      $19.99
-    </span>
-  </button>
-
-</div>
-<div id="resultPanel" class="result-panel">
-  <div class="result-title">1. Basic Photo</div>
-    <div class="result-subtitle">
-  Your photo has passed validation. Choose your preferred photo package below.
-</div>
-
+  <section id="resultPanel" class="result-panel">
+    <h2 class="result-title">1. Basic Photo</h2>
+    <p class="result-subtitle">After a PASS result, preview your prepared photo and select a package.</p>
     <div class="result-canvas-wrap">
-
-    <div class="result-badge">
-        <div class="badge-title">
-            🇺🇸 Embassy-Ready
-        </div>
-
-        <div class="badge-subtitle">
-            2×2 inch · 300 DPI
-        </div>
+      <div class="result-badge"><div id="result-badge-title" class="badge-title">Embassy-Ready</div><div id="result-badge-subtitle" class="badge-subtitle">2 × 2 inch · 300 DPI</div></div>
+      <canvas id="result-canvas" width="600" height="600" aria-label="Prepared photo preview"></canvas>
+      <canvas id="overlay-canvas" width="600" height="600" aria-hidden="true"></canvas>
     </div>
 
-    <canvas id="result-canvas" width="600" height="600">
-     </canvas>
-
-<canvas
-  id="overlay-canvas"
-  width="600"
-  height="600">
-</canvas>
-
-</div>
-<div id="photo-type-card" class="photo-type-card">
-
-<div class="photo-options">
-
-  <label class="photo-option">
-    <input
-      type="radio"
-      name="photoType"
-      value="visa-only"
-      checked>
-
-    <span class="photo-option-content">
-      <strong>U.S. Visa Photo Only</strong>
-      <small>2 × 2 inch</small>
-    </span>
-  </label>
-
-  <label class="photo-option">
-    <input
-      type="radio"
-      name="photoType"
-      value="visa-plus-international">
-
-    <span class="photo-option-content">
-      <strong>U.S. Visa + International Visa Photo</strong>
-      <small>2 × 2 inch + 3.5 × 4.5 cm</small>
-    </span>
-  </label>
-
-</div>
-
-<div id="basic-package-note" class="basic-package-note">
-  <strong>Need both photo sizes?</strong><br>
-  Select the second option before checkout.
-
-  <small>
-    Incorrect package selections are non-refundable.
-  </small>
-</div>
-
-<div
-  id="international-package-info"
-  class="international-package-info">
-
-  <strong>Includes both photo sizes · $7.99 total</strong>
-
-  <span>
-    ✓ 3.5 × 4.5 cm version uses the standard 3.2 cm face height.
-  </span>
-</div>
-
-<div
-  id="international-photo-warning"
-  class="international-photo-warning">
-
-  <strong>⚠ International Photo Notice</strong>
-
-  <span>
-    Some countries may reject visa photos when the eyebrows,
-    ears, or facial outline are obscured by hair.
-    For best results, use a photo with these features clearly visible.
-  </span>
-</div>
-
-</div>
-    <button id="download-btn" type="button">
-      🔓 Unlock Basic Photo · $4.99
-    </button>
-
-<div id="professional-retouch-card" class="professional-retouch-card">
-
-  <div class="professional-title">
-    2. Embassy-Ready Upgrade
-  </div>
-
-  <div class="professional-subtitle">
-    Turn your existing photo into an embassy-ready U.S. visa photo.
-  </div>
-
-  <div class="professional-features">
-    <div>✔ Identity Preserved</div>
-    <div>✔ Natural Skin Texture</div>
-    <div>✔ Natural Skin Tone</div>
-    <div>✔ Remove Glasses (when possible)</div>
-    <div>✔ Restore Natural Eyes</div>
-    <div>✔ Hair Cleanup</div>
-    <div>✔ Clothing Cleanup</div>
-    <div>✔ Professional Studio Lighting</div>
-    <div>✔ Embassy-Ready Finish</div>
-  </div>
-
-  <label class="professional-international-option">
-  <input
-    id="professional-international-checkbox"
-    type="checkbox">
-
-  <span>
-    <strong>Add 3.5 × 4.5 cm international photo</strong>
-    <small>Includes both retouched photo sizes · +$3.00</small>
-  </span>
-</label>
-
- <button
-  id="professional-retouch-btn"
-  class="professional-retouch-btn"
-  type="button">
-
-  <span class="professional-preview-button-title">
-    Preview Embassy-Ready Upgrade
-  </span>
-
-  <span class="professional-preview-button-note">
-    One complimentary preview per day
-  </span>
-
-</button>
-  <div
-      id="retouch-preview"
-      class="retouch-preview"
-      style="display:none;">
-
-      <div class="retouch-title">
-          Professional Preview
+    <div id="photo-type-card" class="photo-type-card">
+      <div class="size-picker" aria-label="Basic photo sizes">
+        <div class="default-size-card"><span>Default size</span><strong id="primary-photo-name">U.S. Visa Photo</strong><small id="primary-photo-size">2 × 2 inch</small></div>
+        <div class="size-picker-heading"><strong>Add one more size</strong><span>Optional · +$3.00</span></div>
+        <div class="size-option-grid"><label class="size-option size-option-none"><input type="radio" name="photoType" value="visa-only" checked /><span>Default only</span></label><label class="size-option" data-size-key="35x45"><input type="radio" name="photoType" value="addon-35x45" /><span>3.5 × 4.5 cm</span></label><label class="size-option" data-size-key="2x2"><input type="radio" name="photoType" value="addon-2x2" /><span>2 × 2 inch</span></label><label class="size-option" data-size-key="30x40"><input type="radio" name="photoType" value="addon-30x40" /><span>3 × 4 cm</span></label><label class="size-option" data-size-key="20x30"><input type="radio" name="photoType" value="addon-20x30" /><span>2 × 3 cm</span></label><label class="size-option" data-size-key="40x60"><input type="radio" name="photoType" value="addon-40x60" /><span>4 × 6 cm</span></label></div>
       </div>
-
-      <img
-          id="retouch-image"
-          alt="Retouch Preview">
-
-      <button id="premium-create-btn" type="button">
-         🔓 Unlock Professional Photo · $9.99
-      </button>
-
-  </div>
-
-</div>
-
-
-    <div class="result-help">
-      Need help? Contact
-      <a href="mailto:usvisaphoto1@gmail.com">usvisaphoto1@gmail.com</a>
+      <div id="basic-package-note" class="basic-package-note">One embassy-ready JPG · $4.99</div>
+      <div id="international-package-info" class="international-package-info"><strong>Default + selected size · $7.99</strong></div>
+      <div id="international-photo-warning" class="international-photo-warning"></div>
+      <div id="basic-eyebrow-note" class="eyebrow-clearance-note"></div>
+      <div id="basic-download-spec" class="download-spec" aria-live="polite"></div>
     </div>
-  </div>
-</div>
+    <button id="download-btn" type="button">Unlock Basic Photo · $4.99</button>
+
+    <section id="professional-retouch-card" class="professional-retouch-card">
+      <div class="professional-title">2. Embassy-Ready Upgrade</div>
+      <p class="professional-subtitle">Start this optional upgrade yourself to preview a carefully retouched result.</p>
+      <div class="professional-features"><div>✓ Identity preserved</div><div>✓ Natural skin texture</div><div>✓ Hair and clothing cleanup</div><div>✓ Balanced studio lighting</div><div>✓ Embassy-conscious editing</div><div>✓ Protected preview before payment</div></div>
+      <div class="size-picker size-picker-professional" aria-label="Embassy-Ready Upgrade photo sizes"><div class="size-picker-heading"><strong>Add one more size</strong><span>Optional · +$3.00</span></div><div class="size-option-grid"><label class="size-option size-option-none"><input type="radio" name="professionalExtraSize" value="" checked /><span>Default only</span></label><label class="size-option" data-size-key="35x45"><input type="radio" name="professionalExtraSize" value="35x45" /><span>3.5 × 4.5 cm</span></label><label class="size-option" data-size-key="2x2"><input type="radio" name="professionalExtraSize" value="2x2" /><span>2 × 2 inch</span></label><label class="size-option" data-size-key="30x40"><input type="radio" name="professionalExtraSize" value="30x40" /><span>3 × 4 cm</span></label><label class="size-option" data-size-key="20x30"><input type="radio" name="professionalExtraSize" value="20x30" /><span>2 × 3 cm</span></label><label class="size-option" data-size-key="40x60"><input type="radio" name="professionalExtraSize" value="40x60" /><span>4 × 6 cm</span></label></div></div>
+      <div id="eru-eyebrow-note" class="eyebrow-clearance-note"></div>
+      <div id="eru-download-spec" class="download-spec download-spec-eru" aria-live="polite"></div>
+      <button id="professional-retouch-btn" class="professional-retouch-btn" type="button"><span class="professional-preview-button-title">Start Embassy-Ready Upgrade</span><span class="professional-preview-button-note">Runs only when you press this button</span></button>
+      <div id="eru-progress" class="eru-progress" hidden aria-live="polite"><div class="eru-progress-copy"><span id="eru-progress-label">Preparing upgrade…</span><strong id="eru-progress-value">0%</strong></div><div class="eru-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="eru-progress-bar" class="eru-progress-bar"></div></div><small>Progress follows the live processing request. Keep this window open.</small></div>
+      <div id="retouch-preview" class="retouch-preview" style="display:none;"><div class="retouch-title">Protected Professional Preview</div><img id="retouch-image" alt="Professional retouch preview" /><button id="premium-create-btn" type="button">Unlock Professional Photo · $9.99</button></div>
+    </section>
+    <div class="result-help">Need help? <a href="mailto:usvisaphoto1@gmail.com">Contact our photo team</a>.</div>
+  </section>
+
+  <section id="expert-edit-card" class="expert-manual-card">
+    <div class="expert-service-badge">PREMIUM MANUAL SERVICE</div>
+    <h2 class="expert-title">3. Expert Manual Editing</h2>
+    <p class="expert-subtitle">For photos that cannot receive an automatic PASS or need specialist review.</p>
+    <div class="expert-highlight">An experienced photo specialist personally reviews, retouches, and checks every order.</div>
+    <div class="expert-features"><div>✓ Manual specialist review</div><div>✓ Embassy compliance assessment</div><div>✓ Natural professional retouch</div><div>✓ Priority delivery within 24 hours</div></div>
+    <button id="expert-edit-btn" type="button"><span class="expert-button-title">Start Manual Editing</span><span class="expert-button-price">$19.99</span></button>
+  </section>
+</main>
 `;
