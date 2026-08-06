@@ -769,6 +769,14 @@ function restoreStoredAutoDetectResult() {
     faceTiltAngle = lockedDetection.faceTiltAngle || 0;
     window.usvisaRecoverable = true;
 
+    const restoredRecoverableMessage =
+      String(storedAutoDetect.message || '');
+
+    window.usvisaGlassesUpgrade =
+      restoredRecoverableMessage
+        .toLowerCase()
+        .includes('glasses');
+
     photoValidationPassed = false;
     autoDetectLocked = true;
 
@@ -2338,15 +2346,15 @@ if (checkMouth) {
       return false;
     }
 
-   if (
-  validation.failureReason === 'glassesAndTeeth' ||
-  validation.failureReason === 'glasses'
-) {
-  window.usvisaGlassesUpgrade = true;
-  validation.eruGlasses = true;
-  return validation;
-}
-  
+    if (validation.failureReason === 'glassesAndTeeth') {
+      showValidationError(
+        '❌ Glasses are not allowed.<br>❌ Teeth must not be visible.<br>Please keep your mouth closed. Glasses removal is available through 2. Embassy-Ready Upgrade.'
+      );
+      window.usvisaGlassesUpgrade = true;
+      validation.eruGlasses = true;
+      return validation;
+    }
+
     if (validation.failureReason === 'glasses') {
       showValidationError(
         '❌ Glasses are not allowed for a standard U.S. visa photo.<br><br>2. Embassy-Ready Upgrade can remove the glasses and restore the eye area naturally.<br>Preview available before payment.'
@@ -2650,79 +2658,6 @@ if (
 
 const validation = validateDetectedPhoto(lm, iw, ih, img);
 if (!validation) return;
-
-if (validation.eruGlasses === true) {
-  lockedDetection = {
-    landmarks: lm,
-    iw,
-    ih,
-
-    imageWidth: iw,
-    imageHeight: ih,
-
-    faceTiltAngle,
-
-    crownY: Number.isFinite(validation.layoutCrownY)
-      ? validation.layoutCrownY
-      : validation.estimatedCrownY,
-    chinY: validation.detectedChinY,
-
-    foreheadY: validation.foreheadY,
-    faceHeight: validation.faceHeight
-  };
-
-  lockedDetectionFingerprint = currentPhotoFingerprint || '';
-  photoValidationPassed = false;
-  autoDetectLocked = true;
-  window.usvisaRecoverable = true;
-
-  const glassesReviewMessage =
-    'Glasses detected.<br><br>' +
-    'Basic Photo is unavailable with glasses.<br><br>' +
-    '<strong>Continue with 2. Embassy-Ready Upgrade to remove them.</strong><br>' +
-    'Preview available before payment.';
-
-  saveAutoDetectRecoverable(
-    currentPhotoFingerprint,
-    lockedDetection,
-    glassesReviewMessage
-  );
-
-  showValidationRecoverable(glassesReviewMessage);
-  setDetectButtonState('warning');
-  setCreateEnabled(false);
-
-  if (createBtn) {
-    createBtn.style.display = 'none';
-  }
-
-  if (professionalCard) {
-    professionalCard.style.display = 'block';
-  }
-
-  if (professionalRetouchBtn) {
-    professionalRetouchBtn.style.display = 'block';
-    applyProfessionalPreviewDailyState();
-  }
-
-  if (expertCard) {
-    expertCard.style.display = 'block';
-  }
-
-  statusEl.textContent =
-    'Glasses detected. Continue with Embassy-Ready Upgrade.';
-
-  if (professionalCard) {
-    setTimeout(function () {
-      professionalCard.scrollIntoView({
-        behavior: 'smooth',
-        block: 'center'
-      });
-    }, 150);
-  }
-
-  return;
-}
 
 if (poseRecoverable && validation.pass) {
     validation.pass = false;
@@ -3138,7 +3073,14 @@ const faceHeightIn =
 
   //----------------------------------
 
-  const measureX=W-32;
+  /*
+   * Place the face-height label over the right edge of the head
+   * instead of pushing it against the outer photo border.
+   */
+  const headCenterX = W / 2;
+  const measureX =
+    headCenterX +
+    TARGET_HEAD_PX * 0.34;
 
   octx.beginPath();
 
@@ -3150,22 +3092,31 @@ const faceHeightIn =
 
   octx.fillStyle="#32c987";
 
+  const measureLabelWidth = 72;
+  const measureLabelHeight = 30;
+
   octx.fillRect(
-      measureX-18,
-      (headTop+headBottom)/2-15,
-      60,
-      30
+    measureX - measureLabelWidth / 2,
+    (headTop + headBottom) / 2 -
+      measureLabelHeight / 2,
+    measureLabelWidth,
+    measureLabelHeight
   );
 
   octx.fillStyle="white";
 
   octx.font="bold 16px Arial";
+  octx.textAlign = 'center';
+  octx.textBaseline = 'middle';
 
   octx.fillText(
-      faceHeightIn.toFixed(2) + " in",
-      measureX-10,
-      (headTop+headBottom)/2+6
+    faceHeightIn.toFixed(2) + " in",
+    measureX,
+    (headTop + headBottom) / 2
   );
+
+  octx.textAlign = 'start';
+  octx.textBaseline = 'alphabetic';
 
   //----------------------------------
   // TOP 2 inch
@@ -4036,13 +3987,16 @@ if (!bgRemovedImg) {
 const recoverable =
   window.usvisaRecoverable === true;
 
+const glassesUpgrade =
+  window.usvisaGlassesUpgrade === true;
+
 if (recoverable) {
   statusEl.textContent =
     'Embassy-Ready Upgrade will reconstruct the missing shoulder area.';
 }
 
 const sourceImage =
-  recoverable
+  recoverable || glassesUpgrade
     ? uploadedImg?.src
     : (
         typeof bgRemovedImg === 'string'
@@ -4051,6 +4005,7 @@ const sourceImage =
       );
 
 console.log('Recoverable:', recoverable);
+console.log('Glasses upgrade:', glassesUpgrade);
 console.log('SOURCE IMAGE:', sourceImage);
 
 if (!sourceImage || typeof sourceImage !== 'string') {
@@ -4068,19 +4023,40 @@ const professionalBlob =
     res.blob()
   );
 
+const lastValidationResult =
+  window.usvisaLastValidationResult || null;
+
+const lastFailureReason =
+  lastValidationResult &&
+  typeof lastValidationResult.failureReason === 'string'
+    ? lastValidationResult.failureReason
+    : '';
+
+const storedDetectResult =
+  getStoredAutoDetectResult(currentPhotoFingerprint);
+
+const storedDetectMessage =
+  storedDetectResult &&
+  typeof storedDetectResult.message === 'string'
+    ? storedDetectResult.message
+    : '';
+
+const shouldRemoveGlasses =
+  window.usvisaGlassesUpgrade === true ||
+  lastFailureReason === 'glasses' ||
+  lastFailureReason === 'glassesAndTeeth' ||
+  storedDetectMessage
+    .toLowerCase()
+    .includes('glasses');
+
+console.log('ERU GLASSES REQUEST', {
+  windowFlag: window.usvisaGlassesUpgrade,
+  lastFailureReason,
+  storedDetectMessage,
+  shouldRemoveGlasses
+});
+
 const formData = new FormData();
-
-console.log(
-  'ERU GLASSES REQUEST',
-  {
-    usvisaGlassesUpgrade: window.usvisaGlassesUpgrade,
-    removeGlasses:
-      window.usvisaGlassesUpgrade === true
-        ? 'true'
-        : 'false'
-  }
-);
-
 
 formData.append(
   'image',
@@ -4090,7 +4066,7 @@ formData.append(
 
 formData.append(
   'removeGlasses',
-  window.usvisaGlassesUpgrade === true ? 'true' : 'false'
+  shouldRemoveGlasses ? 'true' : 'false'
 );
 const res = await fetch('/api/professional-retouch', {
   method: 'POST',
@@ -4193,7 +4169,9 @@ if (retouchPreview) {
       : '🔓 Unlock Professional Photo · $9.99';
 }
 
-updateAdminProfessionalDownloadButton();
+if (typeof updateAdminProfessionalDownloadButton === 'function') {
+  updateAdminProfessionalDownloadButton();
+}
 
 if (expertCard && professionalCard) {
 
