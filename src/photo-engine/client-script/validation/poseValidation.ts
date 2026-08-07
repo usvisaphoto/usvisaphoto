@@ -180,73 +180,65 @@ function validatePoseComposition(results) {
 
   const estimatedOuterExtension =
     shoulderWidth * 0.55;
+const estimatedLeftOuterShoulder =
+  shoulderMinX - estimatedOuterExtension;
 
-  const estimatedLeftOuterShoulder =
-    shoulderMinX -
-    estimatedOuterExtension;
-
-  const estimatedRightOuterShoulder =
-    shoulderMaxX +
-    estimatedOuterExtension;
-
-
+const estimatedRightOuterShoulder =
+  shoulderMaxX + estimatedOuterExtension;
+  
   // ------------------------------------------------
-  // CROP DETECTION
-  // ------------------------------------------------
+// CROP DETECTION
+// ------------------------------------------------
 
-  /*
-   * 1. 관절 자체가 프레임에 매우 가까운 경우
-   */
-  const shoulderJointNearFrame =
-    shoulderMinX <= 0.055 ||
-    shoulderMaxX >= 0.945;
+/*
+ * 1. 실제 어깨 관절이 프레임에 매우 가까운 경우
+ *    → 강한 크롭 증거
+ */
+const shoulderJointNearFrame =
+  shoulderMinX <= 0.045 ||
+  shoulderMaxX >= 0.955;
 
-
-  /*
-   * 2. 추정한 실제 어깨 끝이 이미지 밖으로 나가는 경우
-   */
-  const estimatedShoulderOutsideFrame =
+/*
+ * 2. 추정 어깨 끝이 이미지 밖으로 나가더라도
+ *    실제 좌우 공간이 충분하면 크롭으로 보지 않는다.
+ */
+const estimatedShoulderOutsideFrame =
+  (
     estimatedLeftOuterShoulder <= 0.015 ||
-    estimatedRightOuterShoulder >= 0.985;
+    estimatedRightOuterShoulder >= 0.985
+  ) &&
+  minShoulderSideRoom < 0.06;
 
+/*
+ * 3. 실제 좌우 공간이 정말 부족한 경우만 인정
+ */
+const insufficientSideRoom =
+  shoulderWidth >= 0.20 &&
+  minShoulderSideRoom < 0.07 &&
+  sideRoomToShoulderRatio < 0.18;
 
-  /*
-   * 3. 어깨 폭과 비교했을 때 좌우 공간이 부족한 경우
-   *
-   * 이 조건이 지금 문제의 사진을 잡는 핵심이다.
-   */
-  const insufficientSideRoom =
-    shoulderWidth >= 0.20 &&
-    sideRoomToShoulderRatio < 0.50;
+/*
+ * 4. 어깨 폭이 정말 화면 대부분을 차지하는 극단적인 경우만
+ *    단독 크롭 증거로 사용
+ */
+const shoulderWidthTooWide =
+  shoulderWidth > 0.78;
 
+/*
+ * 지나치게 좁으면
+ * 한쪽 어깨 미검출 또는 Pose 오검출 가능성.
+ */
+const shoulderWidthTooNarrow =
+  shoulderWidth < 0.07;
 
-  /*
-   * 어깨 관절 폭 자체가 화면 대부분을 차지하는 경우.
-   *
-   * 기존 0.82는 지나치게 느슨해서
-   * 실제 타이트 크롭 대부분을 통과시켰다.
-   */
-  const shoulderWidthTooWide =
-    shoulderWidth > 0.56;
-
-
-  /*
-   * 지나치게 좁으면
-   * 한쪽 어깨 미검출 또는 Pose 오검출 가능성.
-   */
-  const shoulderWidthTooNarrow =
-    shoulderWidth < 0.07;
-
-
-  /*
-   * 최종 좌우 어깨 크롭 판단
-   */
-  const shouldersTouchFrame =
-    shoulderJointNearFrame ||
-    estimatedShoulderOutsideFrame ||
-    insufficientSideRoom ||
-    shoulderWidthTooWide;
-
+/*
+ * 최종 좌우 어깨 크롭 판단
+ */
+const shouldersTouchFrame =
+  shoulderJointNearFrame ||
+  estimatedShoulderOutsideFrame ||
+  insufficientSideRoom ||
+  shoulderWidthTooWide;
 
   // ------------------------------------------------
   // VERTICAL COMPOSITION

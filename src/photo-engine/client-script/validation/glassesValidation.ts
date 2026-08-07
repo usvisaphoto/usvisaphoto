@@ -1504,15 +1504,15 @@ const thinMetalFrame =
   leftFrame.detectedSegments >= 2 &&
   rightFrame.detectedSegments >= 2 &&
   balancedBilateralPattern &&
-  leftFrame.score > 0.42 &&
-  rightFrame.score > 0.42 &&
+  leftFrame.score > 0.45 &&
+  rightFrame.score > 0.45 &&
   (
     bridge.detected ||
-    bridge.score > 0.22
-  ) &&
-  (
-    leftFrame.outerDetected ||
-    rightFrame.outerDetected
+    (
+      bridge.score > 0.45 &&
+      leftFrame.outerDetected &&
+      rightFrame.outerDetected
+    )
   );
 /*
  * 일반적인 두꺼운 안경
@@ -1568,6 +1568,7 @@ const glassesDetected =
     leftFrame.averageEdgeRatio > 0.18 &&
     rightFrame.averageEdgeRatio > 0.18 &&
     edgeBalance >= 0.45;
+
   const evidenceCount = [
     templeEvidence,
     frameEvidence,
@@ -1585,26 +1586,46 @@ const glassesDetected =
    * false여도 양쪽 눈에서 2개 이상의 연속 구간과 강한 브리지 점수가
    * 반복해서 나타났다. 이 조합은 PASS시키지 않고 안전하게 REVIEW로 보낸다.
    */
+  
   const bilateralEyewearSignature =
-    leftFrame.detectedSegments >= 2 &&
-    rightFrame.detectedSegments >= 2 &&
-    leftFrame.score >= 0.40 &&
-    rightFrame.score >= 0.40 &&
-    bridge.score >= 0.32 &&
-    confidence >= 0.40;
-  const subtleBilateralEyewearSignature =
-    leftFrame.score >= 0.30 &&
-    rightFrame.score >= 0.30 &&
-    confidence >= 0.34 &&
-    bridge.score >= 0.24 &&
+  leftFrame.detectedSegments >= 2 &&
+  rightFrame.detectedSegments >= 2 &&
+  leftFrame.score >= 0.45 &&
+  rightFrame.score >= 0.45 &&
+  bridge.score >= 0.40 &&
+  confidence >= 0.45 &&
+  (
+    bridge.detected ||
+    templeEvidence ||
+    reflectionEvidence ||
     (
-      templeEvidence ||
-      reflectionEvidence
-    );
+      leftFrame.outerDetected &&
+      rightFrame.outerDetected
+    )
+  );
+
+  const subtleBilateralEyewearSignature =
+  leftFrame.score >= 0.35 &&
+  rightFrame.score >= 0.35 &&
+  confidence >= 0.40 &&
+  bridge.score >= 0.32 &&
+  (
+    bridge.detected ||
+    reflectionEvidence
+  );
+
   const bridgeCorroborated =
-    bridge.detected || bridge.score >= 0.28;
+  bridge.detected ||
+  (
+    bridge.score >= 0.45 &&
+    leftFrame.outerDetected &&
+    rightFrame.outerDetected &&
+    confidence >= 0.45
+  );
+  
   const bridgeIndependentEvidence =
     templeEvidence && reflectionEvidence && frameEvidence;
+
   const needsEyewearReview =
     bridgeIndependentEvidence ||
     bilateralEyewearSignature ||
@@ -1625,6 +1646,29 @@ const glassesDetected =
         )
       )
     );
+
+    console.log("EYEWEAR REVIEW DEBUG", {
+  glassesDetected,
+  needsEyewearReview,
+  evidenceCount,
+  templeEvidence,
+  frameEvidence,
+  bridgeEvidence,
+  reflectionEvidence,
+  bilateralLowContrastFrame,
+  bilateralEyewearSignature,
+  subtleBilateralEyewearSignature,
+  bridgeCorroborated,
+  bridgeIndependentEvidence,
+  bridgeDetected: bridge.detected,
+  bridgeScore: Number(bridge.score.toFixed(3)),
+  confidence: Number(confidence.toFixed(3)),
+  candidateBalance: Number(candidateBalance.toFixed(3)),
+  edgeBalance: Number(edgeBalance.toFixed(3)),
+  leftOuterDetected: leftFrame.outerDetected,
+  rightOuterDetected: rightFrame.outerDetected
+});
+
   const verdict = glassesDetected || needsEyewearReview
     ? 'REVIEW'
     : 'PASS';
