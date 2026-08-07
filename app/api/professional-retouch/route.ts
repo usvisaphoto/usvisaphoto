@@ -39,6 +39,11 @@ export async function POST(req: NextRequest) {
     const formData = await req.formData();
     const eyebrowClearanceRequired = formData.get("eyebrowClearanceRequired") === "true";
     const removeEyewearRequired = formData.get("removeEyewearRequired") === "true";
+    const countryCode = String(formData.get("countryCode") || "").toUpperCase();
+    const darkClothingRequired = 
+     countryCode === "KR" ||
+     countryCode === "JP" ||
+     countryCode === "CN";
     const validation = validateImageUpload(formData.get("image"));
     if (!validation.ok) return NextResponse.json({ error: validation.error }, { status: validation.status });
     const image = validation.file;
@@ -85,6 +90,22 @@ KOREAN-STYLE EYEBROW CLEARANCE — REQUIRED
 - Keep the original hairstyle and overall fringe shape. Do not expose more forehead than necessary.
 - Do not erase real eyebrow hairs. Do not merge eyebrow hair with scalp hair.
 - The result must look naturally photographed, never cosmetically edited.
+
+` : "") + (darkClothingRequired ? `
+
+DESTINATION CLOTHING COLOR POLICY — KR / JP / CN
+
+- Inspect the subject's clothing color.
+- If the clothing is white, near-white, ivory, cream, or very pale and visually blends into the white background, change ONLY the clothing color to a natural dark charcoal gray.
+- Target clothing color should be approximately #3F434A.
+- Preserve the exact original clothing design, neckline, collar, seams, buttons, folds, fabric texture, fit, highlights, and shadows.
+- Do not replace or redesign the clothing.
+- Do not turn casual clothing into a suit or different garment.
+- Do not modify the face, neck, hair, skin, jewelry, body shape, or background while changing clothing color.
+- Preserve realistic fabric lighting and dimensionality.
+- Do not make the clothing flat, painted, synthetic, or pure black.
+- If the clothing is already medium or dark colored, preserve the original clothing color.
+
 ` : ""),
       size: "1024x1024",
       quality: "medium",

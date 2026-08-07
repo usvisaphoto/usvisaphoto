@@ -3,66 +3,26 @@ import Link from "next/link";
 export default function GuaranteeSection() {
   return (
     <section className="mx-auto mt-14 max-w-6xl px-6">
-      <div className="rounded-3xl border border-green-400/20 bg-green-500/10 p-8 text-center shadow-xl">
-
-        <div className="text-4xl">
-          ✅
-        </div>
-
-        <h2 className="mt-4 text-3xl font-extrabold text-white">
-          Built to Official Photo Standards
-        </h2>
-
-        <p className="mx-auto mt-4 max-w-2xl text-lg text-blue-100">
-          Every photo is automatically checked against official U.S. visa and
-          passport size and formatting requirements before you pay anything.
-          You always see your preview first &mdash; you only pay to unlock
-          the final high-quality download.
+      <div className="rounded-3xl border border-emerald-300/25 bg-emerald-400/10 p-8 text-center shadow-xl md:p-12">
+        <div className="text-4xl">✓</div>
+        <p className="mt-4 text-sm font-black uppercase tracking-[.2em] text-emerald-200">Our Service Promise</p>
+        <h2 className="mt-3 text-3xl font-extrabold text-white md:text-5xl">We Stand Behind Every Photo.</h2>
+        <p className="mx-auto mt-5 max-w-3xl text-xl font-bold leading-8 text-white">
+          We don&apos;t just deliver a file and disappear.
+        </p>
+        <p className="mx-auto mt-3 max-w-3xl text-base leading-7 text-blue-100">
+          If something isn&apos;t right with the photo we prepared, contact us. We&apos;ll review the issue and work with you to make it right. From your first upload to your final photo, we&apos;re here to help.
         </p>
 
-        <p className="mx-auto mt-3 max-w-2xl text-sm text-blue-200">
-          Something look off after purchase? Contact us within 7 days &mdash;
-          see our{" "}
-          <Link href="/refund" className="font-bold text-white underline underline-offset-2">
-            Refund Policy
-          </Link>{" "}
-          for details.
-        </p>
-
-        <div className="mt-8 grid gap-4 md:grid-cols-3">
-
-          <div className="rounded-2xl bg-white/10 p-5">
-            <div className="text-3xl">📷</div>
-            <h3 className="mt-3 font-bold text-white">
-              Correct Size
-            </h3>
-            <p className="mt-2 text-sm text-blue-100">
-              2×2 inch • 600×600 pixels
-            </p>
-          </div>
-
-          <div className="rounded-2xl bg-white/10 p-5">
-            <div className="text-3xl">🧑</div>
-            <h3 className="mt-3 font-bold text-white">
-              Proper Head Position
-            </h3>
-            <p className="mt-2 text-sm text-blue-100">
-              Automatic crown-to-chin sizing.
-            </p>
-          </div>
-
-          <div className="rounded-2xl bg-white/10 p-5">
-            <div className="text-3xl">💬</div>
-            <h3 className="mt-3 font-bold text-white">
-              Real Support
-            </h3>
-            <p className="mt-2 text-sm text-blue-100">
-              Need help? Contact us anytime.
-            </p>
-          </div>
-
+        <div className="mt-9 grid gap-4 text-left md:grid-cols-3">
+          <div className="rounded-2xl bg-white/10 p-5"><div className="text-2xl">💬</div><h3 className="mt-3 font-bold text-white">Real Support</h3><p className="mt-2 text-sm leading-6 text-blue-100">Questions or problems? Contact our photo team for help.</p></div>
+          <div className="rounded-2xl bg-white/10 p-5"><div className="text-2xl">👤</div><h3 className="mt-3 font-bold text-white">Personal Review</h3><p className="mt-2 text-sm leading-6 text-blue-100">Difficult cases can be handled individually through Expert Manual Editing.</p></div>
+          <div className="rounded-2xl bg-white/10 p-5"><div className="text-2xl">🛡️</div><h3 className="mt-3 font-bold text-white">Here After Payment</h3><p className="mt-2 text-sm leading-6 text-blue-100">Our support does not end when you download your photo.</p></div>
         </div>
 
+        <p className="mx-auto mt-7 max-w-2xl text-xs leading-5 text-blue-200">
+          Final acceptance is determined by the receiving government authority. For purchase and correction terms, see our{" "}<Link href="/refund" className="font-bold text-white underline underline-offset-2">Refund Policy</Link>.
+        </p>
       </div>
     </section>
   );

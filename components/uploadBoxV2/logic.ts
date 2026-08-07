@@ -165,9 +165,34 @@ function getSelectedBasicExtraSize() {
   return selected && selected.value.indexOf('addon-') === 0 ? selected.value.replace('addon-', '') : '';
 }
 
+function getSelectedProfessionalExtraSizes() {
+  return Array.from(
+    document.querySelectorAll(
+      'input[name="professionalExtraSize"]:checked'
+    )
+  )
+    .map(function(input) {
+      return input.value;
+    })
+    .filter(Boolean);
+}
+
 function getSelectedProfessionalExtraSize() {
-  const selected = document.querySelector('input[name="professionalExtraSize"]:checked');
-  return selected ? selected.value : '';
+  const sizes = getSelectedProfessionalExtraSizes();
+  return sizes.length ? sizes[0] : '';
+}
+
+const ERU_BASE_PRICE = 9.99;
+const ERU_EXTRA_SIZE_PRICE = 3.00;
+
+function getProfessionalTotalPrice() {
+  const extraCount =
+    getSelectedProfessionalExtraSizes().length;
+
+  return (
+    ERU_BASE_PRICE +
+    extraCount * ERU_EXTRA_SIZE_PRICE
+  );
 }
 
 const ADDITIONAL_DOWNLOAD_SPECS = Object.freeze({
@@ -176,6 +201,7 @@ const ADDITIONAL_DOWNLOAD_SPECS = Object.freeze({
   '30x40': { label: '3 × 4 cm', pixels: '354 × 472 px', ratio: '3:4' },
   '20x30': { label: '2 × 3 cm', pixels: '236 × 354 px', ratio: '2:3' },
   '40x60': { label: '4 × 6 cm', pixels: '472 × 709 px', ratio: '2:3' },
+  '50x70': { label: '5 × 7 cm', pixels: '591 × 827 px', ratio: '5:7' },
 });
 
 function simplifyRatio(width, height) {
@@ -204,17 +230,57 @@ function getDefaultDownloadSpec() {
   };
 }
 
-function renderDownloadSpec(target, extraSize) {
+function renderDownloadSpec(target, extraSizes) {
   if (!target) return;
-  const primary = getDefaultDownloadSpec();
-  const extra = ADDITIONAL_DOWNLOAD_SPECS[extraSize];
-  let html = '<strong>Actual download</strong><span>' + primary.label + ' · ' + primary.pixels + ' · ' + primary.ratio + ' · JPG · 300 DPI</span>';
 
-  if (extra) {
-    html += '<span class="download-spec-extra">＋ ' + extra.label + ' · ' + extra.pixels + ' · ' + extra.ratio + ' · JPG · 300 DPI</span>';
-  }
+  const primary = getDefaultDownloadSpec();
+
+  const selectedSizes = Array.isArray(extraSizes)
+    ? extraSizes
+    : extraSizes
+      ? [extraSizes]
+      : [];
+
+  let html =
+    '<strong>Actual download</strong>' +
+    '<span>' +
+    primary.label +
+    ' · ' +
+    primary.pixels +
+    ' · ' +
+    primary.ratio +
+    ' · JPG · 300 DPI</span>';
+
+  selectedSizes.forEach(function(sizeKey) {
+    const extra = ADDITIONAL_DOWNLOAD_SPECS[sizeKey];
+
+    if (!extra) return;
+
+    html +=
+      '<span class="download-spec-extra">' +
+      '＋ ' +
+      extra.label +
+      ' · ' +
+      extra.pixels +
+      ' · ' +
+      extra.ratio +
+      ' · JPG · 300 DPI' +
+      '</span>';
+  });
 
   target.innerHTML = html;
+}
+
+function updateDownloadSpecs() {
+  renderDownloadSpec(
+    basicDownloadSpec,
+    getSelectedBasicExtraSize()
+  );
+
+  renderDownloadSpec(
+    eruDownloadSpec,
+    getSelectedProfessionalExtraSizes()
+  );
 }
 
 function updateDownloadSpecs() {
@@ -223,14 +289,43 @@ function updateDownloadSpecs() {
 }
 
 function updateProfessionalPackageButton() {
-  const withInternational = Boolean(getSelectedProfessionalExtraSize());
+  const selectedSizes =
+    getSelectedProfessionalExtraSizes();
+
+  const extraCount =
+    selectedSizes.length;
+
+  const totalPrice =
+    9.99 + (extraCount * 3);
+
+  const totalText =
+    '$' + totalPrice.toFixed(2);
+
+  const totalPriceEl =
+    document.getElementById('eru-total-price');
+
+  if (totalPriceEl) {
+    totalPriceEl.innerHTML =
+      'Total · <strong>' +
+      totalText +
+      '</strong>' +
+      (
+        extraCount > 0
+          ? ' <span style="font-size:12px;font-weight:600;opacity:.7;">' +
+            '(+$3 × ' +
+            extraCount +
+            ')</span>'
+          : ''
+      );
+  }
 
   if (premiumCreateBtn) {
     premiumCreateBtn.textContent =
-      withInternational
-        ? '🔓 Unlock Professional Photos · $12.99'
-        : '🔓 Unlock Professional Photo · $9.99';
+      extraCount > 0
+        ? '🔓 Unlock Embassy-Ready Photos · ' + totalText
+        : '🔓 Unlock Embassy-Ready Photo · $9.99';
   }
+
   updateDownloadSpecs();
 }
 
@@ -1838,12 +1933,12 @@ function getPurchasedFileLabels(product) {
       ];
     case 'professional':
       return [
-        'Professional Retouched U.S. Visa Photo'
+        'Embassy-Ready U.S. Visa Photo'
       ];
     case 'professional-international':
       return [
-        'Professional Retouched U.S. Visa Photo',
-        'Professional International 3.5 × 4.5 cm Photo'
+        'Embassy-Ready U.S. Visa Photo',
+        'Embassy-Ready Additional Photo'
       ];
     case 'basic':
       return [
@@ -1920,7 +2015,7 @@ function getPaidDownloadFiles(product) {
         {
           url: professionalPhoto,
           filename: getPaidDownloadFilename('professional-us'),
-          label: 'Professional Retouched U.S. Visa Photo'
+          label: 'Embassy-Ready U.S. Visa Photo'
         }
       ];
     case 'professional-international':
@@ -1928,12 +2023,12 @@ function getPaidDownloadFiles(product) {
         {
           url: professionalPhoto,
           filename: getPaidDownloadFilename('professional-us'),
-          label: 'Professional Retouched U.S. Visa Photo'
+          label: 'Embassy-Ready U.S. Visa Photo'
         },
         {
           url: professionalInternationalPhoto,
           filename: getPaidDownloadFilename('professional-international'),
-          label: 'Professional International 3.5 × 4.5 cm Photo'
+          label: 'Embassy-Ready Additional Photo'
         }
       ];
     default:
@@ -2710,7 +2805,7 @@ if (validation.failureReason === 'glassesReview') {
   setDetectButtonState('warning');
 
   showValidationRecoverable(
-    'This photo is cropped too tightly for Basic Photo creation.<br><br>' +
+    'This photo needs more composition space for standard preparation.<br><br>' +
     'Professional Retouch can extend the clothing and shoulder area automatically.'
   );
 
@@ -3164,7 +3259,7 @@ if (poseRecoverable) {
   window.usvisaRecoverable = true;
 
   const recoverableMessage =
-    'This photo is cropped too tightly for Basic Photo creation.<br><br>' +
+    'This photo needs more composition space for standard preparation.<br><br>' +
     'Professional Retouch can extend the clothing and shoulder area automatically.';
 
   photoValidationPassed = false;
@@ -4488,6 +4583,8 @@ formData.append(
   professionalBlob,
   'professional-aligned-photo.jpg'
 );
+formData.append('countryCode', COUNTRY_CODE);
+
 const eyebrowClearanceRequired =
   COUNTRY_CODE === 'KR' ||
   (COUNTRY_CODE === 'US' && getSelectedProfessionalExtraSize() === '35x45');
@@ -4607,8 +4704,8 @@ if (retouchPreview) {
 
   premiumCreateBtn.textContent =
     withInternational
-      ? '🔓 Unlock Professional Photos · $12.99'
-      : '🔓 Unlock Professional Photo · $9.99';
+      ? '🔓 Unlock Embassy-Ready Photos · $12.99'
+      : '🔓 Unlock Embassy-Ready Photo · $9.99';
 }
 
 
@@ -4742,8 +4839,8 @@ premiumCreateBtn?.addEventListener('click', async function () {
     premiumCreateBtn.textContent =
       professionalInternationalCheckbox &&
       professionalInternationalCheckbox.checked
-        ? '🔓 Unlock Professional Photos · $12.99'
-        : '🔓 Unlock Professional Photo · $9.99';
+        ? '🔓 Unlock Embassy-Ready Photos · $12.99'
+        : '🔓 Unlock Embassy-Ready Photo · $9.99';
 
     statusEl.textContent =
       'Payment page failed to open. Please try again.';

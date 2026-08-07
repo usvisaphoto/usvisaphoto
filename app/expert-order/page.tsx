@@ -548,7 +548,7 @@ export default function ExpertOrderPage() {
 
             <div style={styles.priceRow}>
               <span style={styles.currency}>$</span>
-              <span style={styles.price}>19.99</span>
+              <span style={{ textDecoration: "line-through", opacity: 0.45, fontSize: 22 }}>29.99</span><span style={styles.price}>19.99</span><span style={{ fontSize: 12, fontWeight: 800, color: "#92400e", background: "#fef3c7", padding: "4px 8px", borderRadius: 999 }}>GRAND OPENING</span>
             </div>
 
             <p style={styles.summaryDescription}>

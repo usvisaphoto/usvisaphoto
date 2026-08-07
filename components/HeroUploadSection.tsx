@@ -39,8 +39,9 @@ export default function HeroUploadSection({ selectedCountry, onCountryChange }: 
           <h1 className="mt-7 max-w-4xl text-4xl font-black leading-[1.02] tracking-[-.04em] sm:text-6xl xl:text-7xl">{profile.heading}</h1>
           <p className="mt-7 max-w-2xl text-lg leading-8 text-white/85 sm:text-xl">{profile.description}</p>
 
-          <a href="#upload-card" className="mt-8 flex min-h-14 max-w-xl items-center justify-center rounded-2xl bg-cyan-300 px-8 text-lg font-black text-blue-950 shadow-[0_18px_45px_rgba(34,211,238,.25)] transition hover:-translate-y-0.5 hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-cyan-200">Validate your photo</a>
-          <p className="mt-3 text-sm text-blue-200">Preview before checkout · Basic photo from <strong className="text-white">$4.99</strong></p>
+          <a href="#upload-card" className="mt-8 flex min-h-14 max-w-xl items-center justify-center rounded-2xl bg-cyan-300 px-8 text-lg font-black text-blue-950 shadow-[0_18px_45px_rgba(34,211,238,.25)] transition hover:-translate-y-0.5 hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-cyan-200">Create My Visa Photo</a>
+          <p className="mt-3 text-sm text-blue-200">Secure Preview · Pay After Validation · <strong className="text-white">We Stand Behind Every Photo</strong></p>
+          <div className="mt-4 inline-flex items-center gap-2 rounded-xl border border-amber-300/30 bg-amber-300/10 px-4 py-2 text-sm font-bold text-amber-100"><span>Grand Opening</span><span className="opacity-60 line-through">$14.99</span><strong className="text-white">$9.99</strong></div>
 
           <div className="mt-8 grid max-w-xl grid-cols-4 gap-2 sm:gap-3" aria-label="Supported photo destinations">
             {countryCodes.map((country) => (
@@ -61,7 +62,7 @@ export default function HeroUploadSection({ selectedCountry, onCountryChange }: 
             <div className="rounded-[1.5rem] bg-white p-3 text-slate-900 sm:p-4">
               <div className="mb-4 flex items-start justify-between gap-3">
                 <div><h2 className="text-sm font-black" style={{ color: profile.ink }}>{profile.country} Photo Validation</h2><p className="mt-1 text-xs text-slate-500">Upload → Detect → Review → Create</p></div>
-                <div className="flex flex-col items-end gap-1"><span className="rounded-full px-3 py-1 text-xs font-bold" style={{ backgroundColor: profile.accentSoft, color: profile.ink }}>{profile.flag} {profile.shortSize}</span><span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-800">From $4.99</span></div>
+                <div className="flex flex-col items-end gap-1"><span className="rounded-full px-3 py-1 text-xs font-bold" style={{ backgroundColor: profile.accentSoft, color: profile.ink }}>{profile.flag} {profile.shortSize}</span><span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-900">Opening $9.99</span></div>
               </div>
               <iframe key={selectedCountry} title={`${profile.country} photo validator`} srcDoc={iframeHtml} className="min-h-[1180px] w-full rounded-2xl border-0 sm:min-h-[1320px]" sandbox="allow-scripts allow-same-origin allow-forms allow-downloads" />
             </div>

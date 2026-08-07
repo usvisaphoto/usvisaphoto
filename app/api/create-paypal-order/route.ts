@@ -99,21 +99,21 @@ export async function POST(req: Request) {
     value: "7.99",
   },
   professional: {
-    description: "Professional Retouched U.S. Visa Photo",
+    description: "Embassy-Ready U.S. Visa Photo — Grand Opening",
     value: "9.99",
   },
   "professional-international": {
     description:
-      "Professional Retouched U.S. Visa and International Visa Photos",
+      "Embassy-Ready U.S. Visa and Additional Photo — Grand Opening",
     value: "12.99",
   },
   expert: {
-    description: "Expert Manual U.S. Visa Photo Editing",
+    description: "Expert Manual U.S. Visa Photo Editing — Grand Opening",
     value: "19.99",
   },
   "expert-international": {
     description:
-      "Expert Manual U.S. Visa and International Visa Photo Editing",
+      "Expert Manual U.S. Visa and International Visa Photo Editing — Grand Opening",
     value: "22.99",
   },
 }[product];

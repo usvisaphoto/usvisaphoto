@@ -14,6 +14,82 @@ Create a visibly superior Professional Retouch version through:
 - cleaner clothing
 - professional studio lighting
 - subtle facial refinement
+- soft and even facial lighting
+- balanced skin tone across the entire face and neck
+- gentle reduction of harsh shadows on the face
+- gentle reduction of dark shadows on the neck
+- natural transition of skin tone from face to neck
+
+LIGHTING AND SKIN TONE
+
+- Even out noticeable lighting differences across the entire face.
+- Gently brighten only visibly dark facial areas so the face appears naturally and evenly lit.
+- Reduce harsh shadows under the eyes, beside the nose, around the mouth, under the chin, and on the neck.
+- Dark neck shadows must be softened so the neck does not appear significantly darker than the face.
+- Balance the overall skin tone between the face, jaw, chin, and neck.
+- Preserve natural three-dimensional facial shading. Do not make the face flat.
+- Preserve real skin texture, pores, fine lines, and natural tonal variation.
+- Do not use heavy skin smoothing.
+- Do not create plastic, waxy, blurred, airbrushed, or artificial skin.
+- Do not brighten the entire image unnecessarily.
+- Do not overexpose the forehead, nose, cheeks, or chin.
+- Reduce strong highlights only when they are visually distracting.
+- The final result should resemble soft professional studio lighting with a natural, even skin tone.
+
+PORTRAIT FINISHING AND EYE CLEANUP
+
+- Keep the subject's natural skin tone and identity.
+- Make the overall skin tone look clean, healthy, and professionally photographed.
+- Apply soft professional studio-style lighting rather than flat or artificial brightening.
+- Adjust brightness according to the individual subject instead of using one fixed exposure level.
+- If the face or skin appears noticeably underexposed, gently lift the darker areas while preserving natural skin color and texture.
+- Do not over-brighten naturally darker skin tones and do not change ethnicity or natural complexion.
+- Preserve realistic highlights and shadows so the face remains three-dimensional.
+
+FACIAL SHADOW AND NASOLABIAL FOLD
+
+- Gently soften noticeable nasolabial folds on both sides of the mouth.
+- Reduce only excessive shadow depth around the nasolabial folds.
+- Do not erase the folds completely.
+- Preserve natural facial anatomy, expression, age, skin texture, and identity.
+- The result must look like subtle professional portrait retouching, not beauty filtering.
+
+EYE WHITES AND REDNESS
+
+- Reduce visible redness and bloodshot appearance in the whites of the eyes.
+- Keep the sclera naturally off-white; do not make the eye whites unnaturally pure white.
+- Preserve natural veins when subtle and realistic.
+- Do not enlarge the eyes or change eye shape, eyelids, iris size, pupil size, or gaze direction.
+
+IRIS AND EYE REFLECTION CONTROL
+
+- Preserve natural catchlights located near the central pupil or central iris area.
+- Remove or reduce distracting bright reflections that overlap the dark outer iris boundary or limbal ring.
+- The dark outer edge of the iris should remain clean, continuous, and naturally defined.
+- Do not create artificial black outlines around the iris.
+- Do not erase the natural iris texture.
+- Do not move, resize, regenerate, recolor, or redesign the iris or pupil.
+- Preserve the exact original eye geometry and identity.
+
+
+CLOTHING COLOR POLICY — KR / JP / CN
+
+For South Korea, Japan, and China photo outputs only:
+
+- Detect whether the subject is wearing white or near-white clothing.
+- If the clothing is white, off-white, cream, or so light that it visually blends into the required white background, change ONLY the clothing color to a neutral dark gray.
+- Target clothing color: natural dark charcoal gray, approximately #3F434A.
+- Preserve the exact original clothing shape, neckline, collar, seams, folds, fabric texture, shadows, and fit.
+- Do not redesign or replace the clothing.
+- Do not change the subject's skin, neck, hair, face, jewelry, or background while recoloring the clothing.
+- Keep realistic fabric highlights and shadows so the clothing does not appear digitally painted or artificially flat.
+- If the clothing is already clearly darker than the white background, preserve its original color.
+- Treat the entire visible garment as one clothing region, including the collar, lapels, neckline fabric, cuffs, sleeves, and any other connected white or near-white fabric.
+- If white or near-white clothing is changed to dark charcoal gray, ALL visible white parts belonging to that same garment must also be changed to the same dark charcoal gray.
+- Do not leave a white collar, white lapel, white neckline edge, or other white garment section behind.
+- Pay special attention to shirt collars directly below the neck and jaw.
+- The recolored collar and garment must have a consistent dark charcoal color while preserving their original fabric texture, folds, seams, highlights, and shadows.
+- Do not recolor exposed skin, neck, hair, jewelry, or the white background.
 
 The improvement must come from professional retouching and pose correction,
 not from facial reconstruction or generating a different person.

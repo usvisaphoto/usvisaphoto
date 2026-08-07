@@ -637,7 +637,29 @@ button{flex:1;border:0;border-radius:14px;padding:13px 10px;font-size:14px;font-
   border-color:#fde1a7;
   background:#fffdf7;
 }
+.download-spec{
+  font-size:14px !important;
+  line-height:1.65 !important;
+}
 
+.download-spec strong{
+  display:block;
+  font-size:15px !important;
+  font-weight:800 !important;
+  margin-bottom:5px;
+}
+
+.download-spec span{
+  display:block;
+  font-size:13px !important;
+  line-height:1.6 !important;
+}
+
+.download-spec-extra{
+  margin-top:4px;
+  padding-top:4px;
+  border-top:1px solid #e2e8f0;
+}
 /* KR/JP/CN keep their exact output pixels and physical proportions; only the
    protected on-screen preview is intentionally calmer and smaller. */
 .compact-east-asia-preview .result-canvas-wrap{
