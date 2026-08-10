@@ -59,6 +59,7 @@ const PROFESSIONAL_PHOTO_SPECS = Object.freeze({
   '30x40': Object.freeze({ width:354,height:472,physicalHeightMm:40,headLengthMm:13.3,topMarginMm:4,shoulderExpandRatio:1,jpegQuality:.99 }),
   '20x30': Object.freeze({ width:236,height:354,physicalHeightMm:30,headLengthMm:22,topMarginMm:3,shoulderExpandRatio:1,jpegQuality:.99 }),
   '40x60': Object.freeze({ width:472,height:709,physicalHeightMm:60,headLengthMm:34,topMarginMm:5,shoulderExpandRatio:1,jpegQuality:.99 }),
+  '50x70': Object.freeze({width:591,height:827,physicalHeightMm:70,headLengthMm:34,topMarginMm:5,shoulderExpandRatio:1,jpegQuality:.99}),
 });
 
 function getProfessionalPhotoSpec(format) {

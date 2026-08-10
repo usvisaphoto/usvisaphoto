@@ -1506,14 +1506,10 @@ const thinMetalFrame =
   balancedBilateralPattern &&
   leftFrame.score > 0.45 &&
   rightFrame.score > 0.45 &&
-  (
-    bridge.detected ||
-    (
-      bridge.score > 0.45 &&
-      leftFrame.outerDetected &&
-      rightFrame.outerDetected
-    )
-  );
+  bridge.detected &&
+leftFrame.outerDetected &&
+rightFrame.outerDetected;
+
 /*
  * 일반적인 두꺼운 안경
  */
@@ -1537,9 +1533,8 @@ console.log({
 });
 
 const glassesDetected =
-    bilateralWithBridge ||
-    thinMetalFrame ||
-    strongSymmetricPattern;
+  bilateralWithBridge ||
+  strongSymmetricPattern;
 
  console.log("GLASSES RULES", {
   bilateralWithBridge,
@@ -1626,26 +1621,7 @@ const glassesDetected =
   const bridgeIndependentEvidence =
     templeEvidence && reflectionEvidence && frameEvidence;
 
-  const needsEyewearReview =
-    bridgeIndependentEvidence ||
-    bilateralEyewearSignature ||
-    subtleBilateralEyewearSignature ||
-    (
-      bridgeCorroborated &&
-      (
-        (evidenceCount >= 2 && confidence >= 0.32) ||
-        (
-          bilateralLowContrastFrame &&
-          confidence >= 0.32
-        ) ||
-        (
-          leftFrame.score >= 0.40 &&
-          rightFrame.score >= 0.40 &&
-          Math.min(candidateBalance, edgeBalance) >= 0.45 &&
-          confidence >= 0.36
-        )
-      )
-    );
+  const needsEyewearReview = glassesDetected;
 
     console.log("EYEWEAR REVIEW DEBUG", {
   glassesDetected,

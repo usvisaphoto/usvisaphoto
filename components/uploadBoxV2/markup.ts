@@ -38,6 +38,13 @@ export const uploadBoxMarkup = String.raw`
       <canvas id="overlay-canvas" width="600" height="600" aria-hidden="true"></canvas>
     </div>
 
+<div id="eru-included-note" class="eru-included-note">
+  <strong>✓ EMBASSY-READY UPGRADE</strong>
+  <span>
+    Your final Embassy-Ready photo will be prepared after review.
+  </span>
+</div>
+
     <div id="photo-type-card" class="photo-type-card" style="display:none;" aria-hidden="true">
       <div class="size-picker" aria-label="Internal preview photo sizes">
         <div class="default-size-card"><span>Default size</span><strong id="primary-photo-name">U.S. Visa Photo</strong><small id="primary-photo-size">2 × 2 inch</small></div>
@@ -55,7 +62,7 @@ export const uploadBoxMarkup = String.raw`
       <div class="professional-title">1. Embassy-Ready Upgrade</div>
       <div style="display:flex;align-items:baseline;gap:8px;margin:8px 0 10px;"><span style="text-decoration:line-through;opacity:.5;font-weight:800;">$14.99</span><strong style="font-size:26px;color:#0f766e;">$9.99</strong><span style="font-size:11px;font-weight:900;color:#92400e;background:#fef3c7;border-radius:999px;padding:4px 8px;">GRAND OPENING · 33% OFF</span></div>
       <p class="professional-subtitle">Professional preparation for most photos. Start it only when you are ready to preview the upgraded result.</p>
-      <div class="professional-features"><div>✓ Embassy photo validation</div><div>✓ Identity preserved</div><div>✓ Natural skin texture</div><div>✓ Hair and clothing cleanup</div><div>✓ Balanced studio lighting</div><div>✓ Glasses removal when possible</div><div>✓ Protected preview before payment</div><div>✓ We stand behind every photo</div></div>
+      <div class="professional-features"><div>✓ Embassy photo validation</div><div>✓ Identity preserved</div><div>✓ Natural skin texture</div><div>✓ Hair and clothing cleanup</div><div>✓ Balanced studio lighting</div><div>✓ Glasses removal when possible</div><div>✓ Protected preview before payment</div><div>✓ We stand behind every photo</div><div> ✓ ★Includes your validated prepared photo</div></div>
       <div class="size-picker size-picker-professional" aria-label="Embassy-Ready Upgrade photo sizes">
   <div class="size-picker-heading">
     <strong>Add extra photo sizes</strong>

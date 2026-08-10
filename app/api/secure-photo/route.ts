@@ -119,13 +119,15 @@ export async function POST(req: Request) {
      * unsupported image format 오류를 내는 환경을 방지한다.
      */
     const watermarkBuffer = await sharp(
-      watermarkSvg(width, height),
-      {
-        density: 144,
-      }
-    )
-      .png()
-      .toBuffer();
+  watermarkSvg(width, height)
+)
+  .resize({
+    width: Math.round(width),
+    height: Math.round(height),
+    fit: "fill",
+  })
+  .png()
+  .toBuffer();
 
     const preview = await sharp(buffer)
       .composite([

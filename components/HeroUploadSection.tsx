@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { embassyValidationHtmlV3 } from "@/components/uploadBoxV2";
 import { COUNTRY_PROFILES, countryCodes, otherCountryCodes, type CountryCode } from "@/lib/photo-country-config";
 
@@ -22,8 +22,50 @@ function CountryFlag({ country }: { country: (typeof countryCodes)[number] }) {
 
 export default function HeroUploadSection({ selectedCountry, onCountryChange }: Props) {
   const profile = COUNTRY_PROFILES[selectedCountry];
+  const validatorFrameRef = useRef<HTMLIFrameElement>(null);
   const iframeHtml = useMemo(() => embassyValidationHtmlV3.replace("<head>", `<head><script>window.EMBASSY_PHOTO_PROFILE=${JSON.stringify(profile).replace(/</g, "\\u003c")};<\/script>`), [profile]);
-  return (
+
+useEffect(() => {
+  const handleCheckoutMessage = (event: MessageEvent) => {
+    if (event.source !== validatorFrameRef.current?.contentWindow) return;
+
+    const message = event.data;
+
+    if (
+      message?.type !== "OPEN_PAYPAL_CHECKOUT" ||
+      typeof message?.url !== "string"
+    ) {
+      return;
+    }
+
+    try {
+      const checkoutUrl = new URL(message.url);
+
+      const isPayPalUrl =
+        checkoutUrl.protocol === "https:" &&
+        (checkoutUrl.hostname === "paypal.com" ||
+          checkoutUrl.hostname.endsWith(".paypal.com"));
+
+      if (!isPayPalUrl) {
+        console.error("Blocked invalid checkout URL:", checkoutUrl.href);
+        return;
+      }
+
+      window.location.assign(checkoutUrl.href);
+    } catch (error) {
+      console.error("Invalid checkout URL:", error);
+    }
+  };
+
+  window.addEventListener("message", handleCheckoutMessage);
+
+  return () => {
+    window.removeEventListener("message", handleCheckoutMessage);
+  };
+}, []);
+
+return (
+
     <section className="mx-auto flex max-w-[112rem] flex-col px-4 pb-10 pt-5 sm:px-6 lg:px-8">
       <header className="mb-8 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-3" aria-label="USVisaPhoto home">
@@ -64,7 +106,14 @@ export default function HeroUploadSection({ selectedCountry, onCountryChange }: 
                 <div><h2 className="text-sm font-black" style={{ color: profile.ink }}>{profile.country} Photo Validation</h2><p className="mt-1 text-xs text-slate-500">Upload → Detect → Review → Create</p></div>
                 <div className="flex flex-col items-end gap-1"><span className="rounded-full px-3 py-1 text-xs font-bold" style={{ backgroundColor: profile.accentSoft, color: profile.ink }}>{profile.flag} {profile.shortSize}</span><span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-900">Opening $9.99</span></div>
               </div>
-              <iframe key={selectedCountry} title={`${profile.country} photo validator`} srcDoc={iframeHtml} className="min-h-[1180px] w-full rounded-2xl border-0 sm:min-h-[1320px]" sandbox="allow-scripts allow-same-origin allow-forms allow-downloads" />
+              <iframe
+  ref={validatorFrameRef}
+  key={selectedCountry}
+  title={`${profile.country} photo validator`}
+  srcDoc={iframeHtml}
+  className="min-h-[1180px] w-full rounded-2xl border-0 sm:min-h-[1320px]"
+  sandbox="allow-scripts allow-same-origin allow-forms allow-downloads"
+/> 
             </div>
           </div>
         </div>

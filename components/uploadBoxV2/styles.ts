@@ -688,5 +688,28 @@ button{flex:1;border:0;border-radius:14px;padding:13px 10px;font-size:14px;font-
 @media (max-width: 420px){
   .upload-zone{height:360px}
 }
+.eru-included-note{
+  margin:10px 12px 12px;
+  padding:10px 12px;
+  border:1px solid #86d9bf;
+  border-radius:12px;
+  background:#ecfdf5;
+  color:#065f46;
+  font-size:12px;
+  line-height:1.45;
+}
+
+.eru-included-note strong{
+  display:block;
+  margin-bottom:3px;
+  font-size:11px;
+  font-weight:900;
+  letter-spacing:.02em;
+}
+
+.eru-included-note span{
+  display:block;
+  color:#276749;
+}
 
 `;

@@ -182,6 +182,47 @@ function getSelectedProfessionalExtraSize() {
   return sizes.length ? sizes[0] : '';
 }
 
+function requiresEyebrowClearanceForSize(sizeKey) {
+  return sizeKey === '35x45';
+}
+
+function requiresDarkClothingForSize(sizeKey) {
+  return sizeKey === '35x45';
+}
+
+function countryRequiresEyebrowClearance() {
+  return (
+    COUNTRY_CODE === 'KR' ||
+    COUNTRY_CODE === 'JP' ||
+    COUNTRY_CODE === 'CN'
+  );
+}
+
+function countryRequiresDarkClothing() {
+  return (
+    COUNTRY_CODE === 'KR' ||
+    COUNTRY_CODE === 'JP' ||
+    COUNTRY_CODE === 'CN'
+  );
+}
+
+function canSelectProfessionalExtraSize(sizeKey) {
+  if (
+    requiresEyebrowClearanceForSize(sizeKey) &&
+    currentEyebrowOverlapDetected
+  ) {
+    return {
+      allowed: false,
+      reason: 'EYEBROWS_COVERED'
+    };
+  }
+
+  return {
+    allowed: true,
+    reason: null
+  };
+}
+
 const ERU_BASE_PRICE = 9.99;
 const ERU_EXTRA_SIZE_PRICE = 3.00;
 
@@ -283,10 +324,7 @@ function updateDownloadSpecs() {
   );
 }
 
-function updateDownloadSpecs() {
-  renderDownloadSpec(basicDownloadSpec, getSelectedBasicExtraSize());
-  renderDownloadSpec(eruDownloadSpec, getSelectedProfessionalExtraSize());
-}
+
 
 function updateProfessionalPackageButton() {
   const selectedSizes =
@@ -664,6 +702,8 @@ let selectedPhotoType = 'visa';
 let professionalPreviewLocked = false;
 let lockedDetectionFingerprint = '';
 let professionalRetouchBusy = false;
+let currentEyebrowOverlapDetected = false;
+
 function median(values) {
   if (!values.length) return 0;
 
@@ -1336,7 +1376,8 @@ function clearPaymentState() {
   window.parent.localStorage.removeItem('usvisa_secure_basic_photo');
   window.parent.localStorage.removeItem('usvisa_secure_basic_extra_photo');
   window.parent.localStorage.removeItem('usvisa_secure_professional_photo');
-  window.parent.localStorage.removeItem('usvisa_secure_professional_extra_photo');
+    window.parent.localStorage.removeItem('usvisa_secure_professional_extra_photo');
+    window.parent.localStorage.removeItem('usvisa_secure_professional_extra_photos');
   window.parent.localStorage.removeItem('usvisa_pending_professional_protected_preview');
   window.parent.localStorage.removeItem('usvisa_created_photo_files_fingerprint');
   window.parent.localStorage.removeItem('usvisa_pending_professional_photo_fingerprint');
@@ -1351,6 +1392,39 @@ function clearPaymentState() {
 
 function readStoredPhoto(key) {
   return window.parent.localStorage.getItem(key) || '';
+}
+
+function readStoredProfessionalExtraPhotos() {
+  const raw = readStoredPhoto(
+    'usvisa_secure_professional_extra_photos'
+  );
+
+  if (!raw) {
+    return [];
+  }
+
+  try {
+    const parsed = JSON.parse(raw);
+
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+
+    return parsed.filter(function(item) {
+      return (
+        item &&
+        typeof item.sizeKey === 'string' &&
+        isSecurePhotoToken(item.token)
+      );
+    });
+  } catch (error) {
+    console.error(
+      'PROFESSIONAL EXTRA PHOTO STORAGE ERROR:',
+      error
+    );
+
+    return [];
+  }
 }
 
 function writeStoredPhoto(key, value) {
@@ -1418,15 +1492,73 @@ function isSecurePhotoToken(value) {
 }
 
 function getSecurePhotoTokens(product) {
-  const basic = readStoredPhoto('usvisa_secure_basic_photo');
-  const basicExtra = readStoredPhoto('usvisa_secure_basic_extra_photo');
-  const professional = readStoredPhoto('usvisa_secure_professional_photo');
-  const professionalExtra = readStoredPhoto('usvisa_secure_professional_extra_photo');
+  const basic =
+    readStoredPhoto(
+      'usvisa_secure_basic_photo'
+    );
 
-  if (product === 'basic') return [basic].filter(isSecurePhotoToken);
-  if (product === 'basic-international') return [basic, basicExtra].filter(isSecurePhotoToken);
-  if (product === 'professional') return [professional].filter(isSecurePhotoToken);
-  if (product === 'professional-international') return [professional, professionalExtra].filter(isSecurePhotoToken);
+  const basicExtra =
+    readStoredPhoto(
+      'usvisa_secure_basic_extra_photo'
+    );
+
+  const professional =
+    readStoredPhoto(
+      'usvisa_secure_professional_photo'
+    );
+
+  const professionalExtraPhotos =
+    readStoredProfessionalExtraPhotos();
+
+  const professionalExtraTokens =
+    professionalExtraPhotos.map(
+      function(item) {
+        return item.token;
+      }
+    );
+
+  if (product === 'basic') {
+    return [
+      basic
+    ].filter(isSecurePhotoToken);
+  }
+
+  if (product === 'basic-international') {
+    return [
+      basic,
+      basicExtra
+    ].filter(isSecurePhotoToken);
+  }
+
+  /*
+   * E.R.U always includes:
+   * 1. validated prepared photo
+   * 2. Embassy-Ready photo
+   */
+  if (product === 'professional') {
+    return [
+      basic,
+      professional
+    ].filter(isSecurePhotoToken);
+  }
+
+  /*
+   * E.R.U + optional sizes:
+   * prepared photo
+   * Embassy-Ready default photo
+   * every selected extra size
+   */
+  if (
+    product ===
+    'professional-international'
+  ) {
+    return [
+      basic,
+      professional,
+      ...professionalExtraTokens
+    ].filter(isSecurePhotoToken);
+  }
+
   return [];
 }
 
@@ -1931,15 +2063,41 @@ function getPurchasedFileLabels(product) {
         'HD U.S. Visa Photo',
         'International 3.5 × 4.5 cm Photo'
       ];
-    case 'professional':
-      return [
-        'Embassy-Ready U.S. Visa Photo'
+   case 'professional':
+  return window.usvisaRecoverable === true
+    ? [
+        'Embassy-Ready Photo'
+      ]
+    : [
+        'Validated Prepared Photo',
+        'Embassy-Ready Photo'
       ];
-    case 'professional-international':
-      return [
-        'Embassy-Ready U.S. Visa Photo',
-        'Embassy-Ready Additional Photo'
+
+case 'professional-international': {
+  const extraPhotos =
+    readStoredProfessionalExtraPhotos();
+
+  const extraLabels =
+    extraPhotos.map(function(item) {
+      const spec =
+        ADDITIONAL_DOWNLOAD_SPECS[item.sizeKey];
+
+      return spec
+        ? 'Embassy-Ready ' + spec.label
+        : 'Embassy-Ready Additional Photo';
+    });
+
+  return window.usvisaRecoverable === true
+    ? [
+        'Embassy-Ready Photo',
+        ...extraLabels
+      ]
+    : [
+        'Validated Prepared Photo',
+        'Embassy-Ready Photo',
+        ...extraLabels
       ];
+}
     case 'basic':
       return [
         'HD U.S. Visa Photo'
@@ -2010,36 +2168,74 @@ function getPaidDownloadFiles(product) {
           label: 'International 3.5 × 4.5 cm Photo'
         }
       ];
-    case 'professional':
-      return [
-        {
-          url: professionalPhoto,
-          filename: getPaidDownloadFilename('professional-us'),
-          label: 'Embassy-Ready U.S. Visa Photo'
-        }
-      ];
-    case 'professional-international':
-      return [
-        {
-          url: professionalPhoto,
-          filename: getPaidDownloadFilename('professional-us'),
-          label: 'Embassy-Ready U.S. Visa Photo'
-        },
-        {
-          url: professionalInternationalPhoto,
-          filename: getPaidDownloadFilename('professional-international'),
-          label: 'Embassy-Ready Additional Photo'
-        }
-      ];
-    default:
-      return [
-        {
-          url: cleanPhoto,
-          filename: getPaidDownloadFilename('basic-us'),
-          label: 'HD U.S. Visa Photo'
-        }
-      ];
+case 'professional': {
+  const professionalFiles = [
+    {
+      url: professionalPhoto,
+      filename: getPaidDownloadFilename('professional-us'),
+      label: 'Embassy-Ready U.S. Visa Photo'
+    }
+  ];
+
+  if (window.usvisaRecoverable === true) {
+    return professionalFiles;
   }
+
+  return [
+    {
+      url: cleanPhoto,
+      filename: getPaidDownloadFilename('basic-us'),
+      label: 'Validated Prepared Photo'
+    },
+    ...professionalFiles
+  ];
+}
+
+case 'professional-international': {
+  const extraPhotos =
+    readStoredProfessionalExtraPhotos();
+
+  const professionalFiles = [
+    {
+      url: professionalPhoto,
+      filename: getPaidDownloadFilename('professional-us'),
+      label: 'Embassy-Ready U.S. Visa Photo'
+    },
+
+    ...extraPhotos.map(function(item) {
+      const spec =
+        ADDITIONAL_DOWNLOAD_SPECS[item.sizeKey];
+
+      return {
+        url: item.token,
+
+        filename:
+          'usvisaphoto_embassy_ready_' +
+          item.sizeKey +
+          '.jpg',
+
+        label:
+          spec
+            ? 'Embassy-Ready ' + spec.label
+            : 'Embassy-Ready Additional Photo'
+      };
+    })
+  ];
+
+  if (window.usvisaRecoverable === true) {
+    return professionalFiles;
+  }
+
+  return [
+    {
+      url: cleanPhoto,
+      filename: getPaidDownloadFilename('basic-us'),
+      label: 'Validated Prepared Photo'
+    },
+    ...professionalFiles
+  ];
+}
+}
 }
 
 function getMissingPaidDownloadLabels(product) {
@@ -2865,6 +3061,53 @@ detectBtn.addEventListener('click', async function(e) {
     return;
   }
 
+  if (!img) {
+    statusEl.textContent = 'Please upload a photo first.';
+    setCreateEnabled(false);
+    return;
+  }
+
+  const sourceCheckPromise = (async () => {
+    const sourceForm = new FormData();
+    sourceForm.append('image', uploadedFile);
+
+    try {
+      const sourceResponse = await fetch('/api/source-photo-check', {
+        method: 'POST',
+        body: sourceForm
+      });
+
+      if (!sourceResponse.ok) {
+        console.error(
+          'SOURCE PHOTO CHECK ERROR:',
+          await sourceResponse.text()
+        );
+
+        return 'UNCERTAIN';
+      }
+
+      const sourceResult = await sourceResponse.json();
+
+      const validSourceTypes = [
+        'DIGITAL',
+        'PRINTED_PHOTO',
+        'PHOTO_OF_PHOTO',
+        'SCREEN_CAPTURE',
+        'UNCERTAIN'
+      ];
+
+      return validSourceTypes.includes(sourceResult?.source)
+        ? sourceResult.source
+        : 'UNCERTAIN';
+    } catch (sourceError) {
+      console.error('SOURCE PHOTO CHECK ERROR:', sourceError);
+      return 'UNCERTAIN';
+    }
+  })();
+
+  clearCreatedPhotoState(currentPhotoFingerprint);
+
+
   clearCreatedPhotoState(currentPhotoFingerprint);
   clearPaymentState();
   lockedDetection = null;
@@ -3143,10 +3386,7 @@ if (validation.failureReason === 'glassesReview') {
   return;
 }
 
-const sourceForm = new FormData();
-sourceForm.append('image', uploadedFile);
 
-let sourceType = 'UNCERTAIN';
 let eyebrowClearance = 'UNCERTAIN';
 
 if (checkEyebrows) {
@@ -3156,35 +3396,32 @@ if (checkEyebrows) {
   }
 }
 
+
+
 if (EYEBROW_CLEARANCE_REQUIRED) {
   const eyebrowInspection = inspectEyebrowHairOverlap(lm, iw, ih, img);
+
+  currentEyebrowOverlapDetected =
+    !eyebrowInspection.uncertain &&
+    eyebrowInspection.overlap === true;
+
   eyebrowClearance = eyebrowInspection.uncertain
     ? 'UNCERTAIN'
     : eyebrowInspection.overlap
       ? 'HAIR_OVERLAP'
       : 'CLEAR';
-}
 
-try {
-  const sourceResponse = await fetch('/api/source-photo-check', {
-    method: 'POST',
-    body: sourceForm
+  console.log('EYEBROW OPTION STATE:', {
+    eyebrowClearance,
+    currentEyebrowOverlapDetected
   });
-
-  if (sourceResponse.ok) {
-    const sourceResult = await sourceResponse.json();
-    sourceType = sourceResult && sourceResult.source
-      ? sourceResult.source
-      : 'UNCERTAIN';
-  } else {
-    console.error(
-      'SOURCE PHOTO CHECK ERROR:',
-      await sourceResponse.text()
-    );
-  }
-} catch (sourceError) {
-  console.error('SOURCE PHOTO CHECK ERROR:', sourceError);
+} else {
+  currentEyebrowOverlapDetected = false;
 }
+
+const sourceType = await sourceCheckPromise;
+
+console.log('SOURCE TYPE DEBUG:', sourceType);
 
 if (EYEBROW_CLEARANCE_REQUIRED) {
   if (eyebrowClearance === 'CLEAR') {
@@ -4590,6 +4827,31 @@ const eyebrowClearanceRequired =
   (COUNTRY_CODE === 'US' && getSelectedProfessionalExtraSize() === '35x45');
 formData.append('eyebrowClearanceRequired', eyebrowClearanceRequired ? 'true' : 'false');
 formData.append('removeEyewearRequired', GLASSES_RULE_ENABLED ? 'true' : 'false');
+const shoulderRecoveryRequired =
+ recoverable || Boolean(
+    lockedDetection &&
+    (
+      lockedDetection.recoverable === true ||
+      lockedDetection.shoulderLikelyCropped === true ||
+      lockedDetection.upperBodyTooClose === true ||
+      lockedDetection.compositionHardFail === true ||
+      lockedDetection.failureReason === 'SHOULDERS_CROPPED'
+    )
+  );
+
+formData.append(
+  'shoulderRecoveryRequired',
+  shoulderRecoveryRequired ? 'true' : 'false'
+);
+
+console.log('E.R.U SHOULDER RECOVERY:', {
+  shoulderRecoveryRequired,
+  recoverable: lockedDetection?.recoverable,
+  shoulderLikelyCropped: lockedDetection?.shoulderLikelyCropped,
+  upperBodyTooClose: lockedDetection?.upperBodyTooClose,
+  compositionHardFail: lockedDetection?.compositionHardFail,
+  failureReason: lockedDetection?.failureReason
+});
 const res = await fetch('/api/professional-retouch', {
   method: 'POST',
   body: formData,
@@ -4631,20 +4893,83 @@ writeStoredPhoto(
   PROFESSIONAL_PREVIEW_VERSION
 );
 
-const selectedProfessionalExtraSize = getSelectedProfessionalExtraSize();
-const professionalInternationalPhoto = selectedProfessionalExtraSize
-  ? await createInternationalPhotoFromResult(finalProfessionalJpg, selectedProfessionalExtraSize)
-  : '';
-const securedProfessionalExtraPhoto = professionalInternationalPhoto
-  ? await protectPhotoForCheckout(professionalInternationalPhoto)
-  : null;
+const selectedProfessionalExtraSizes =
+  getSelectedProfessionalExtraSizes();
+
+const securedProfessionalExtraPhotos = [];
+
+for (
+  const sizeKey of selectedProfessionalExtraSizes
+) {
+  const extraPhoto =
+    await createInternationalPhotoFromResult(
+      finalProfessionalJpg,
+      sizeKey
+    );
+
+  if (!extraPhoto) {
+    continue;
+  }
+
+  const securedExtra =
+    await protectPhotoForCheckout(extraPhoto);
+
+  if (
+    !securedExtra ||
+    !isSecurePhotoToken(securedExtra.token)
+  ) {
+    throw new Error(
+      'Could not protect additional E.R.U photo: ' +
+      sizeKey
+    );
+  }
+
+  securedProfessionalExtraPhotos.push({
+    sizeKey: sizeKey,
+    token: securedExtra.token
+  });
+}
+
+/*
+ * New multiple-extra storage.
+ *
+ * Do NOT store the clean image itself.
+ * Only encrypted secure-photo tokens are stored.
+ */
+writeStoredPhoto(
+  'usvisa_secure_professional_extra_photos',
+  JSON.stringify(
+    securedProfessionalExtraPhotos
+  )
+);
+
+/*
+ * Keep the old single-extra fields temporarily
+ * for compatibility with existing code.
+ */
+const firstProfessionalExtra =
+  securedProfessionalExtraPhotos.length
+    ? securedProfessionalExtraPhotos[0]
+    : null;
+
+writeStoredPhoto(
+  'usvisa_secure_professional_extra_photo',
+  firstProfessionalExtra
+    ? firstProfessionalExtra.token
+    : ''
+);
+
+writeStoredPhoto(
+  'usvisa_pending_professional_extra_size_key',
+  firstProfessionalExtra
+    ? firstProfessionalExtra.sizeKey
+    : ''
+);
 
 writeStoredPhoto(
   'usvisa_pending_professional_international_photo',
-  isLocalAdminEnvironment() ? professionalInternationalPhoto : ''
+  ''
 );
-writeStoredPhoto('usvisa_secure_professional_extra_photo', securedProfessionalExtraPhoto ? securedProfessionalExtraPhoto.token : '');
-writeStoredPhoto('usvisa_pending_professional_extra_size_key', selectedProfessionalExtraSize);
 
 if (!retouchImage) {
   throw new Error('Professional preview image element was not found.');
@@ -4782,16 +5107,7 @@ premiumCreateBtn?.addEventListener('click', async function () {
     return;
   }
 
-  if (isLocalAdminEnvironment()) {
-    triggerAdminFileDownload(
-      dataUrlToBlob(savedProfessionalPhoto),
-      'eru-korea-passport-' + getAdminDownloadTimestamp() + '.jpg'
-    );
-    statusEl.textContent =
-      'Local admin test file downloaded. Checkout was not opened.';
-    return;
-  }
-
+ 
   if (
     withInternational &&
     (!isSecurePhotoToken(readStoredPhoto('usvisa_secure_professional_extra_photo')) || readStoredPhoto('usvisa_pending_professional_extra_size_key') !== getSelectedProfessionalExtraSize())
@@ -4831,7 +5147,13 @@ premiumCreateBtn?.addEventListener('click', async function () {
       throw new Error('Checkout could not be linked to this photo.');
     }
 
-    window.parent.location.href = data.url;
+    window.parent.postMessage(
+  {
+    type: 'OPEN_PAYPAL_CHECKOUT',
+    url: data.url
+  },
+  "*"
+);
   } catch (error) {
     console.error('PROFESSIONAL CHECKOUT ERROR:', error);
 
@@ -5047,7 +5369,13 @@ const response = await fetch('/api/create-paypal-order', {
       throw new Error('Checkout could not be linked to this photo.');
     }
 
-    window.parent.location.href = data.url;
+    window.parent.postMessage(
+  {
+    type: "OPEN_PAYPAL_CHECKOUT",
+    url: data.url
+  },
+  "*"
+);
  } catch (error) {
   console.error(error);
   statusEl.textContent = 'Payment page failed to open. Please try again.';

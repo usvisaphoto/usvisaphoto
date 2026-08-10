@@ -39,6 +39,7 @@ export async function POST(req: NextRequest) {
     const formData = await req.formData();
     const eyebrowClearanceRequired = formData.get("eyebrowClearanceRequired") === "true";
     const removeEyewearRequired = formData.get("removeEyewearRequired") === "true";
+    const shoulderRecoveryRequired = formData.get("shoulderRecoveryRequired") === "true";
     const countryCode = String(formData.get("countryCode") || "").toUpperCase();
     const darkClothingRequired = 
      countryCode === "KR" ||
@@ -65,11 +66,20 @@ export async function POST(req: NextRequest) {
       image: openaiFile,
       prompt: PROFESSIONAL_RETOUCH_PROMPT + (removeEyewearRequired ? `
 
-DESTINATION EYEWEAR POLICY — REMOVE
+DESTINATION EYEWEAR POLICY — REMOVE — HIGHEST PRIORITY
 
-- Detect and remove all eyewear when present, including lenses, rims, bridge, nose pads, temples, shadows, glare, and reflections.
-- Reconstruct only the small areas physically hidden by the eyewear while preserving exact identity and eye and eyebrow geometry.
-- The finished image must contain no glasses or eyewear fragments.
+- Eyewear removal is a mandatory completion requirement for this image.
+- Remove ALL visible eyewear completely, including lenses, rims, bridge, nose pads, temples, ear pieces, shadows, glare, reflections, lens edges, frame fragments, and any residual transparent or metallic traces.
+- Do not leave thin, transparent, rimless, semi-rimless, wire, metal, plastic, or skin-colored frame fragments.
+- Reconstruct only the small facial areas that were physically hidden by the eyewear.
+- Preserve the exact original identity, eye shape, eye spacing, eyelids, iris position, eyebrows, nose, cheek structure, temples, ears, skin texture, and facial proportions.
+- Do not redesign or beautify the eyes.
+- Do not change the eyebrow shape while removing the glasses.
+- Eyewear removal takes priority over shoulder recovery, clothing cleanup, lighting correction, skin cleanup, and all other cosmetic refinements.
+- If shoulder recovery is also required, complete BOTH tasks in the same result: first ensure the eyewear is fully removed, then recover the upper-body composition.
+- Before finalizing the image, visually verify that no glasses, lenses, rims, bridge, temples, reflections, or eyewear fragments remain anywhere on the face.
+- The finished image MUST contain zero visible eyewear.
+
 ` : `
 
 DESTINATION EYEWEAR POLICY — PRESERVE
@@ -91,7 +101,30 @@ KOREAN-STYLE EYEBROW CLEARANCE — REQUIRED
 - Do not erase real eyebrow hairs. Do not merge eyebrow hair with scalp hair.
 - The result must look naturally photographed, never cosmetically edited.
 
-` : "") + (darkClothingRequired ? `
+` : "") + 
+
+(shoulderRecoveryRequired ? `
+
+SHOULDER AND UPPER-BODY RECOVERY — REQUIRED
+
+- The source photo has been specifically classified as recoverable because the shoulder or upper-body composition is insufficient.
+- Shoulder and upper-body recovery is REQUIRED for this image. Do not return the image with the original tight or cropped shoulder composition unchanged.
+- Extend the visible clothing and shoulder area only as much as necessary to create a natural professional passport/visa portrait.
+- Reconstruct missing left and/or right shoulder areas using the visible anatomy, neckline, collar, garment structure, fabric texture, seams, folds, lighting, and opposite shoulder as references.
+- If one shoulder is pushed forward, rotated, raised, lowered, or visually dominant, gently correct the local shoulder and upper-torso posture.
+- Keep the face, head size, facial identity, neck anatomy, and natural body type unchanged.
+- Preserve the original clothing type, design, pattern, color, collar, texture, and fit unless a separate destination clothing-color rule explicitly requires recoloring.
+- Do not simply zoom the portrait out without reconstructing the missing shoulder/clothing area.
+- Do not shrink the face to create artificial space.
+- Do not move the whole person sideways merely to create room.
+- Do not mirror the opposite shoulder exactly.
+- Do not create perfectly horizontal or mathematically symmetrical shoulders.
+- Preserve natural human asymmetry.
+- The final image must show a convincingly complete and naturally balanced upper-body composition suitable for an official passport/visa photograph.
+
+`: "") + 
+
+(darkClothingRequired ? `
 
 DESTINATION CLOTHING COLOR POLICY — KR / JP / CN
 
