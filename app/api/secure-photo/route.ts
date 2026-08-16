@@ -118,12 +118,10 @@ export async function POST(req: Request) {
      * Sharp가 SVG Buffer를 직접 composite하면서
      * unsupported image format 오류를 내는 환경을 방지한다.
      */
-    const watermarkBuffer = await sharp(
+   const watermarkBuffer = await sharp(
   watermarkSvg(width, height)
 )
-  .resize({
-    width: Math.round(width),
-    height: Math.round(height),
+  .resize(width, height, {
     fit: "fill",
   })
   .png()
@@ -156,18 +154,24 @@ export async function POST(req: Request) {
       }
     );
   } catch (error) {
-    console.error(
-      "SECURE PHOTO ERROR:",
-      error
-    );
+  console.error("SECURE PHOTO ERROR:", error);
 
-    return NextResponse.json(
-      {
-        error: "Photo protection failed.",
+  const message =
+    error instanceof Error
+      ? error.message
+      : String(error);
+
+  return NextResponse.json(
+    {
+      error: "Photo protection failed.",
+      detail: message,
+    },
+    {
+      status: 500,
+      headers: {
+        "Cache-Control": "no-store",
       },
-      {
-        status: 500,
-      }
-    );
-  }
+    }
+  );
+}
 }

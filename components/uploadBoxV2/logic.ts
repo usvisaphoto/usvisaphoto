@@ -448,26 +448,11 @@ function syncBasicPackageUiForPaidProduct(product) {
 function updateBasicPackageButton() {
   if (!downloadBtn) return;
 
-if (hasValidPaidReturn()) {
-  const paidProduct = getCurrentPaidProduct();
-  syncBasicPackageUiForPaidProduct(paidProduct);
-  updatePaidDownloadButton(
-    getPaidDownloadCount(),
-    paidProduct
-  );
-  return;
+  // Basic $4.99 / $7.99 checkout has been discontinued.
+  // Keep the internal element for legacy code references, but never expose it.
+  downloadBtn.style.display = 'none';
+  downloadBtn.setAttribute('aria-hidden', 'true');
 }
-
-  const selected = getSelectedBasicPackage();
-
-  downloadBtn.textContent =
-    selected === 'visa-plus-international'
-      ? '🔓 Unlock Both Photo Sizes · $7.99'
-      : '🔓 Unlock HD Photo · $4.99';
-
-  updateBasicPackageHelpPanels(selected);
-}
-
 updateProfessionalPackageButton();
 
 photoTypeInputs.forEach(function (input) {
@@ -1042,9 +1027,7 @@ function getCurrentImage() {
 function showValidationRecoverable(message) {
   const createBtn = document.getElementById("create-photo-btn");
 
-  if (resultPanel) {
-    resultPanel.style.display = "block";
-  }
+  
 
   setBasicPhotoSectionVisible(false);
 
@@ -1096,9 +1079,6 @@ if (createBtn) {
   } 
 
 function showValidationExpertOnly(message) {
-  if (resultPanel) {
-    resultPanel.style.display = 'block';
-  }
 
   setBasicPhotoSectionVisible(false);
 
@@ -3796,7 +3776,7 @@ function drawFinalPhoto(sourceImg) {
   }
 
   const currentHeadPx = Math.max(1, chinY - crownY);
- const scale = TARGET_HEAD_PX / currentHeadPx;
+const scale = (TARGET_HEAD_PX * 0.9) / currentHeadPx;
 
   const sourceWidth = sourceImg.naturalWidth || sourceImg.width;
   const centerX = sourceWidth / 2;
@@ -4494,11 +4474,11 @@ if (expertCard && professionalCard) {
 
 if (uploadTips) uploadTips.style.display = 'none';
 
-downloadBtn.style.display = 'inline-flex';
-    if (uploadTips) uploadTips.style.display = 'none';
+downloadBtn.style.display = 'none';
+if (uploadTips) uploadTips.style.display = 'none';
 
-    downloadBtn.style.display = 'inline-flex';
-   updateBasicPackageButton();
+downloadBtn.style.display = 'none';
+updateBasicPackageButton();
 
     setDownloadEnabled(true);
     statusEl.textContent = 'Preview created. Unlock download to receive the clean photo.';
@@ -5019,6 +4999,10 @@ if (retouchPreview) {
   retouchPreview.style.removeProperty('display');
   retouchPreview.classList.add('is-visible');
 }
+  // E.R.U preview is ready: Basic checkout must no longer be available.
+if (downloadBtn) {
+  downloadBtn.style.display = 'none';
+}
   if (premiumCreateBtn) {
   const withInternational =
     professionalInternationalCheckbox &&
@@ -5445,7 +5429,7 @@ function restorePaidDownloadIfAvailable(restoreMessage) {
     canvas.style.display = 'block';
     if (resultPanel) resultPanel.style.display = 'block';
     if (uploadTips) uploadTips.style.display = 'none';
-    downloadBtn.style.display = 'inline-flex';
+    downloadBtn.style.display = 'none';
     if (professionalCard) professionalCard.style.display = 'block';
     if (professionalRetouchBtn) {
       professionalRetouchBtn.style.display = 'block';

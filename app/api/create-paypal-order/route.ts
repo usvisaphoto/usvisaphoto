@@ -118,7 +118,14 @@ export async function POST(req: Request) {
   },
 }[product];
     const isPhotoDownload = !product.startsWith("expert");
-    const expectedTokenCount = product.endsWith("-international") ? 2 : 1;
+    const expectedTokenCount =
+  product === "professional"
+    ? 2
+    : product === "professional-international"
+      ? securePhotoTokens.length
+      : product.endsWith("-international")
+        ? 2
+        : 1;
 
     if (isPhotoDownload && securePhotoTokens.length !== expectedTokenCount) {
       return NextResponse.json({ error: "Protected photo files are incomplete." }, { status: 400 });

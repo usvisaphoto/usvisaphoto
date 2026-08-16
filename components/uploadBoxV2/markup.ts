@@ -9,9 +9,9 @@ export const uploadBoxMarkup = String.raw`
   </section>
 
   <div class="actions" aria-label="Photo validation actions">
-    <button id="detect-btn" type="button">Auto Detect</button>
-    <button id="create-btn" type="button" disabled>Create Photo</button>
-  </div>
+  <button id="detect-btn" type="button">Auto Detect</button>
+  <button id="create-btn" type="button" disabled>Create Photo</button>
+</div>
   <button id="new-photo-btn" type="button" class="new-photo-btn">Choose another photo</button>
   <p class="guide-note" id="guideNote">Upload a photo, then choose Auto Detect. Nothing runs automatically.</p>
 
@@ -29,7 +29,7 @@ export const uploadBoxMarkup = String.raw`
   <div class="status" id="status" role="status">Upload a photo to begin</div>
   <aside class="notice" id="uploadTips"><strong>For the best result</strong><br />Look directly at the camera, keep both eyes open, close your mouth, and remove glasses, hats, or head coverings.<br /><br />Need help? <a href="mailto:usvisaphoto1@gmail.com">Contact our photo team</a>.</aside>
 
-  <section id="resultPanel" class="result-panel">
+  <section id="resultPanel" class="result-panel" style="display:none;">
     <h2 class="result-title">Your Prepared Photo Preview</h2>
     <p class="result-subtitle">Review your protected preview, then choose Embassy-Ready Upgrade to prepare the final photo.</p>
     <div class="result-canvas-wrap">
@@ -56,7 +56,8 @@ export const uploadBoxMarkup = String.raw`
       <div id="basic-eyebrow-note" class="eyebrow-clearance-note"></div>
       <div id="basic-download-spec" class="download-spec" aria-live="polite"></div>
     </div>
-    <button id="download-btn" type="button" style="display:none;" aria-hidden="true">Internal Preview</button>
+    
+   <button id="download-btn" type="button" style="display:none;" aria-hidden="true">Internal Preview</button>
 
     <section id="professional-retouch-card" class="professional-retouch-card">
       <div class="professional-title">1. Embassy-Ready Upgrade</div>
@@ -126,6 +127,11 @@ export const uploadBoxMarkup = String.raw`
     </section>
     <div class="result-help"><strong>We Stand Behind Every Photo.</strong> Need help? <a href="mailto:usvisaphoto1@gmail.com">Contact our photo team</a>.</div>
   </section>
+    </section>
+
+    
+    <div class="result-help"><strong>We Stand Behind Every Photo.</strong> Need help? <a href="mailto:usvisaphoto1@gmail.com">Contact our photo team</a>.</div>
+    
 
   <section id="expert-edit-card" class="expert-manual-card">
     <div class="expert-service-badge">PERSONAL SPECIALIST SERVICE</div>
