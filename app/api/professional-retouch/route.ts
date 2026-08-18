@@ -41,6 +41,12 @@ export async function POST(req: NextRequest) {
     const removeEyewearRequired = formData.get("removeEyewearRequired") === "true";
     const shoulderRecoveryRequired = formData.get("shoulderRecoveryRequired") === "true";
     const countryCode = String(formData.get("countryCode") || "").toUpperCase();
+    console.log("PROFESSIONAL RETOUCH FLAGS:", {
+  removeEyewearRequired,
+  eyebrowClearanceRequired,
+  shoulderRecoveryRequired,
+  countryCode,
+});
     const darkClothingRequired = 
      countryCode === "KR" ||
      countryCode === "JP" ||
@@ -60,34 +66,65 @@ export async function POST(req: NextRequest) {
         type: image.type || "image/png",
       }
     );
+console.log("PROFESSIONAL RETOUCH BASE PROMPT LENGTH:", PROFESSIONAL_RETOUCH_PROMPT.length);
 
     const response = await openai.images.edit({
       model: "gpt-image-2",
       image: openaiFile,
       prompt: PROFESSIONAL_RETOUCH_PROMPT + (removeEyewearRequired ? `
 
-DESTINATION EYEWEAR POLICY — REMOVE — HIGHEST PRIORITY
+DESTINATION EYEWEAR POLICY — COMPLETE REMOVAL — ABSOLUTE HIGHEST PRIORITY
 
-- Eyewear removal is a mandatory completion requirement for this image.
-- Remove ALL visible eyewear completely, including lenses, rims, bridge, nose pads, temples, ear pieces, shadows, glare, reflections, lens edges, frame fragments, and any residual transparent or metallic traces.
-- Do not leave thin, transparent, rimless, semi-rimless, wire, metal, plastic, or skin-colored frame fragments.
-- Reconstruct only the small facial areas that were physically hidden by the eyewear.
-- Preserve the exact original identity, eye shape, eye spacing, eyelids, iris position, eyebrows, nose, cheek structure, temples, ears, skin texture, and facial proportions.
-- Do not redesign or beautify the eyes.
-- Do not change the eyebrow shape while removing the glasses.
-- Eyewear removal takes priority over shoulder recovery, clothing cleanup, lighting correction, skin cleanup, and all other cosmetic refinements.
-- If shoulder recovery is also required, complete BOTH tasks in the same result: first ensure the eyewear is fully removed, then recover the upper-body composition.
-- Before finalizing the image, visually verify that no glasses, lenses, rims, bridge, temples, reflections, or eyewear fragments remain anywhere on the face.
-- The finished image MUST contain zero visible eyewear.
+MANDATORY EDIT:
+The subject is wearing eyeglasses in the source image.
+The final image MUST NOT contain eyeglasses.
 
+This is a required physical image edit, not a recommendation.
+Do not preserve the source eyewear.
+
+REMOVE COMPLETELY:
+- both lenses
+- all lens edges
+- left and right rims
+- bridge
+- nose pads
+- temples and arms
+- frame portions beside the eyes
+- frame portions near the ears
+- glare and reflections caused by the lenses
+- shadows caused by the frame
+- every visible or partial eyewear fragment
+
+After removing the eyewear, naturally reconstruct ONLY the facial pixels that were physically hidden by it.
+
+IDENTITY PRESERVATION:
+- Preserve the person's exact identity.
+- Preserve the original eye size, shape, spacing, direction, iris position, eyelids, and expression.
+- Preserve the original eyebrows exactly.
+- Preserve the nose, cheeks, ears, forehead, face shape, jaw, skin texture, and facial proportions.
+- Do not enlarge, beautify, reshape, reposition, or redesign the eyes.
+- Do not alter the hairstyle or facial expression.
+
+TASK PRIORITY:
+1. Complete removal of all eyewear.
+2. Exact preservation of facial identity.
+3. Required shoulder or upper-body recovery, if requested.
+4. All remaining professional retouch instructions.
+
+IMPORTANT:
+Shoulder recovery, lighting correction, skin correction, clothing processing, and all other refinements MUST NOT cause the eyeglasses to be restored or regenerated.
+
+FINAL VISUAL CHECK:
+Before returning the image, inspect both eyes, the nose bridge, both temples, and both ears.
+There must be ZERO lenses, ZERO rims, ZERO bridge, ZERO temples, ZERO glare, and ZERO eyewear fragments in the final image.
 ` : `
 
 DESTINATION EYEWEAR POLICY — PRESERVE
 
-- If the source photograph contains glasses, preserve those exact glasses completely.
-- Do not remove, replace, redesign, resize, recolor, straighten, relocate, or regenerate the lenses, rims, bridge, nose pads, or temples.
-- Preserve natural reflections and transparency unless a tiny lighting cleanup is required; never make the glasses disappear.
-- If the source has no glasses, do not add any.
+- If glasses are present, preserve the original glasses, including their shape, position, color, lenses, rims, bridge, nose pads, and temples.
+- Preserve natural transparency and reflections except for minimal lighting cleanup.
+- Never remove or redesign the glasses.
+- If no glasses are present, do not add any.
 `) + (eyebrowClearanceRequired ? `
 
 KOREAN-STYLE EYEBROW CLEARANCE — REQUIRED

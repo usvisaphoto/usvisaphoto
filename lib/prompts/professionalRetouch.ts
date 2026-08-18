@@ -12,27 +12,13 @@ The result must look like the same real person photographed more carefully in a 
 PRIMARY GOAL
 ==================================================
 
-Create a visibly superior professional passport/visa photograph through:
+Create a visibly superior professional passport/visa photograph while preserving the exact identity, natural anatomy, and photographic realism.
 
-- exact identity preservation
-- case-by-case posture correction
-- natural head, chin, neck, shoulder, and upper-body alignment
-- professional studio lighting
-- balanced facial and neck skin tone
-- subtle reduction of distracting facial shadows
-- natural eye cleanup
-- minimal nasolabial-fold softening when needed
-- natural clothing cleanup
-- preservation of the original garment
-- small flyaway-hair cleanup
-- clean white background
-- embassy-ready photographic finish
+Correct only what is visibly necessary for professional posture, alignment, lighting, skin tone, clothing, hair, background, and embassy-ready presentation.
 
-Every correction must be based on the individual photograph.
+Evaluate every photograph individually. Do not apply fixed correction strength or geometry to every person.
 
-Do NOT apply the same correction strength or geometry to every person.
-
-Make only corrections that are visibly necessary.
+Natural photographic realism and identity preservation take priority over cosmetic enhancement.
 
 ==================================================
 STRICT IDENTITY LOCK
@@ -75,178 +61,63 @@ Do not produce an artificial, synthetic, waxy, beautified, or generated appearan
 The person's identity must remain unquestionably identical to the source photograph.
 
 ==================================================
-CASE-BY-CASE RETOUCHING
-==================================================
-
-Evaluate the uploaded photograph before making corrections.
-
-Different photographs require different corrections.
-
-Do not automatically modify every available feature.
-
-If an area already looks natural and professionally photographed, preserve it.
-
-Use the minimum correction required to improve the photograph.
-
-Prioritize natural photographic realism over mathematical symmetry.
-
-==================================================
 HEAD, CHIN, NECK, SHOULDER, AND BODY ALIGNMENT
 ==================================================
 
-Evaluate the subject's posture individually.
+Evaluate posture individually and correct only visible misalignment.
 
-Correct minor head tilt only when visually necessary.
-
-Keep the face naturally centered above the neck and upper torso.
-
-Maintain a natural vertical relationship between:
-
-- face center
-- chin
-- neck
-- shoulders
-- upper torso
-
-Do not move the entire person merely to compensate for uneven shoulders.
-
-Do not shift the entire portrait left, right, up, or down unless required by the final official crop.
-
-Preserve the original head size.
-
-Preserve the original crown-to-chin length.
+Preserve the original head size, crown-to-chin length, facial proportions, and identity.
 
 Never stretch, compress, widen, narrow, or distort the face.
 
+Use local, anatomically natural corrections rather than moving the entire person to compensate for body or shoulder imbalance.
 ==================================================
 NECK ALIGNMENT
 ==================================================
 
-Position the neck naturally beneath the chin.
+Keep the neck naturally positioned beneath the chin while preserving the person's real neck width and anatomy.
 
-Evaluate the subject's real anatomy rather than applying a fixed neck-width ratio.
+Correct only obvious neck leaning, displacement, pinching, or posture-related asymmetry.
 
-Correct only visually noticeable:
+Maintain a natural jaw-to-neck-to-collar-to-shoulder transition.
 
-- neck leaning
-- neck displacement
-- unnatural pinching
-- posture-related asymmetry
-- severe shadow imbalance
-
-Preserve the person's natural neck width and anatomy.
-
-Do not artificially widen or narrow the neck.
-
-Do not lengthen or shorten the neck unless a tiny positional correction is required to restore natural posture.
-
-Maintain a natural transition from:
-
-jaw
-→ neck
-→ collar
-→ shoulders
-
-Avoid:
-
-- hourglass neck shapes
-- pinched neck edges
-- hard transitions
-- artificial symmetry
-- anatomical distortion
-
+Do not unnaturally widen, narrow, lengthen, shorten, pinch, or symmetrize the neck.
 ==================================================
 SHOULDER AND UPPER-BODY ANALYSIS
 ==================================================
 
-Analyze the left and right shoulders independently.
+Evaluate both shoulders independently for height, front/back position, rotation, and visual prominence.
 
-Evaluate BOTH:
+Detect obvious imbalance caused by a raised, lowered, forward, backward, or rotated shoulder or mild upper-torso rotation.
 
-1. shoulder height
-2. front/back shoulder position
-
-Detect when one shoulder appears:
-
-- noticeably closer to the camera
-- pushed forward
-- pulled backward
-- raised
-- lowered
-- rotated
-- unnaturally dominant compared with the opposite side
-
-Also evaluate whether mild upper-torso rotation is causing visible shoulder asymmetry.
-
-Do not judge shoulder balance only by vertical height.
+Do not evaluate shoulder balance by vertical height alone.
 
 ==================================================
 SHOULDER AND UPPER-BODY CORRECTION
 ==================================================
 
-When one shoulder projects forward unnaturally, gently correct the shoulder and nearby upper torso so the posture appears naturally balanced.
+Correct obvious forward/backward shoulder imbalance, upper-torso rotation, or distracting shoulder-height differences only when necessary.
 
-When mild upper-body rotation makes one shoulder substantially more prominent, reduce that visual imbalance.
+Keep the neck naturally positioned between the shoulders and preserve realistic shoulder slope, clavicle position, torso width, and body proportions.
 
-Correct shoulder height only when the difference is visually distracting.
+Do not force perfect symmetry or artificially horizontal shoulders.
 
-Use the natural posture of the individual as the reference.
+Preserve natural shoulder width, body type, chest width, and human asymmetry.
 
-Do NOT force mathematically perfect symmetry.
-
-Preserve natural human asymmetry.
-
-Do not make both shoulders artificially horizontal.
-
-Maintain realistic:
-
-- shoulder slope
-- clavicle position
-- torso width
-- neck-to-shoulder transition
-- body proportions
-
-Keep the neck naturally positioned between the shoulders.
-
-Do not change:
-
-- body weight
-- body type
-- chest width
-- natural shoulder width
-
-Do not artificially slim or broaden the torso.
-
-The final posture should resemble the same person naturally sitting or standing straighter for a professional studio portrait.
-
+The result should look like the same person naturally standing or sitting straighter for a professional studio portrait.
 ==================================================
 CROPPED OR MISSING SHOULDER RECOVERY
 ==================================================
 
-If a shoulder or clothing area is genuinely cropped by the source image, reconstruct only the minimum area needed for a balanced passport/visa composition.
+If shoulder or clothing is genuinely cropped, reconstruct only the minimum area required for a balanced passport/visa composition.
 
-Use as references:
+Use visible anatomy, the opposite shoulder, neckline, garment structure, seams, fabric texture, lighting, and natural body proportions as references.
 
-- visible anatomy
-- opposite shoulder
-- neckline
-- garment construction
-- sleeve direction
-- fabric texture
-- seams
-- lighting
-- natural body proportions
+Preserve realistic shoulder anatomy and the original garment.
 
-Do not mirror the opposite shoulder exactly.
+Do not mirror the opposite shoulder, duplicate folds, invent unnecessary body area, or create anatomically impossible shoulders.
 
-Do not duplicate clothing folds.
-
-Do not create anatomically impossible shoulders.
-
-Do not invent unnecessary body area.
-
-Only reconstruct what is required for the official photo composition.
-
+Reconstruct only what is genuinely missing and required for the official composition.
 ==================================================
 CLOTHING PRESERVATION — STRICT
 ==================================================
@@ -367,10 +238,46 @@ Even out noticeable lighting differences across:
 Reduce harsh shadows:
 
 - under the eyes
+- across the cheeks
 - beside the nose
 - around the mouth
 - beneath the chin
 - across the neck
+
+UNDER-EYE SHADOW BALANCE
+
+Gently reduce visibly dark under-eye circles and uneven under-eye shadows when present.
+
+Treat the left and right under-eye areas independently.
+
+If one side is noticeably darker than the other because of lighting, soften only the excessive darkness until both sides appear naturally balanced.
+
+Preserve the person's real lower-eyelid anatomy, eye bags, fine lines, skin texture, and age characteristics.
+
+Do not erase natural lower-eyelid contours.
+
+Do not brighten the under-eye area beyond the surrounding natural facial skin tone.
+
+Do not blur, smooth, reshape, enlarge, lift, or beautify the eyes.
+
+CHEEK SHADOW BALANCE
+
+Evaluate the lighting and tonal density of the left and right cheeks independently.
+
+If one cheek contains noticeably stronger or darker photographic shadow than the other, gently reduce only the excessive shadow until the cheeks appear naturally balanced under soft professional studio lighting.
+
+Use the naturally better-lit cheek as a tonal reference.
+
+Correct lighting imbalance only.
+
+Do not change cheek volume, cheekbone position, face width, jaw width, facial contour, or facial anatomy.
+
+Do not brighten both cheeks unnecessarily.
+
+Preserve natural three-dimensional facial shading and realistic skin texture.
+
+The final face must retain natural depth and must not appear flat, airbrushed, or beauty-retouched.
+
 
 Dark neck shadows should be softened when they make the neck significantly darker than the face.
 
@@ -397,6 +304,69 @@ Do not overexpose:
 Reduce strong highlights only when visually distracting.
 
 The result should resemble soft professional studio lighting rather than beauty or fashion lighting.
+
+==================================================
+NECK, TIE, CLOTHING AND SHOULDER ALIGNMENT
+==================================================
+
+This alignment correction is MANDATORY for every E.R.U. portrait.
+
+Use the vertical center of the face as the fixed reference axis. Preserve the face and head exactly; do not move, rotate, reshape, widen, narrow, or regenerate them for alignment.
+
+Align naturally along the same facial center axis:
+- chin
+- neck
+- shirt collar opening
+- tie knot and visible tie
+- upper torso
+
+If the neck, collar, tie, jacket, or upper torso is off-center, reposition or reconstruct only those areas as needed beneath the preserved face. Do not preserve obvious source-image misalignment.
+
+After centering the body axis, balance the shoulders. Correct obvious left/right shoulder-height imbalance and visibly tilted clothing while preserving natural human asymmetry.
+
+Keep jacket lapels naturally balanced around the centered neck and tie.
+
+Do not change shoulder width, body build, clothing style, shirt design, tie design, or jacket design.
+
+The clothing and upper body must adapt to the preserved face, never the opposite.
+
+A result with an obviously off-center neck or tie, tilted shoulder line, or laterally displaced upper torso is NOT a completed E.R.U. result.
+
+The final portrait must look as if the same person naturally stood straight and centered in front of a professional passport-photo camera.
+==================================================
+NASOLABIAL FOLD BALANCE
+==================================================
+
+Preserve the subject's natural nasolabial folds and facial structure.
+
+Gently soften both nasolabial folds only when they appear visually prominent.
+
+Do not completely remove nasolabial folds.
+
+If one nasolabial fold is noticeably darker or deeper than the other because of uneven lighting or shadow, reduce only the excessive darkness or depth until it visually matches the softer side.
+
+Use the lighter, more natural-looking side as the reference.
+
+Do not deepen the opposite side to create symmetry.
+
+Preserve natural facial volume, skin texture, pores, fine lines, and three-dimensional shading.
+
+Do not blur or smooth the surrounding skin.
+
+Do not alter the shape of the nose, mouth, cheeks, jaw, or smile.
+
+The result should look like subtle professional studio retouching, not beauty retouching.
+
+==================================================
+SUBTLE CHEEK AND JAW REFINEMENT
+==================================================
+
+- Only when the face has sufficient natural facial volume, reduce the cheeks and jawline very slightly.
+- The adjustment must be subtle and should preserve the person's identity and natural facial structure.
+- Do not noticeably narrow the face.
+- Do not alter the eyes, nose, mouth, cheekbones, or overall facial proportions.
+- If the person already has a naturally slim, narrow, angular, or low-volume face, do not apply any cheek or jaw slimming.
+- When uncertain whether slimming is appropriate, preserve the original face shape.
 
 ==================================================
 SKIN TEXTURE
@@ -427,27 +397,6 @@ Do not create:
 - synthetic skin
 
 Do not remove all wrinkles or natural facial lines.
-
-==================================================
-NASOLABIAL FOLDS
-==================================================
-
-Evaluate the nasolabial folds individually.
-
-If one or both nasolabial folds are visually deep because of harsh shadow, gently reduce the excessive shadow depth.
-
-Do not erase the folds completely.
-
-Do not change facial anatomy.
-
-Do not alter expression.
-
-Do not make the subject appear artificially younger.
-
-If one side is significantly darker or deeper than the other, use the more natural side as a visual reference and reduce only the excessive imbalance.
-
-The result must resemble subtle professional portrait retouching, not a beauty filter.
-
 ==================================================
 EYE WHITES AND REDNESS
 ==================================================
@@ -527,27 +476,122 @@ Do not:
 either eyebrow.
 
 Destination-specific eyebrow-clearance instructions appended to this prompt take priority when required.
+============================================================
+HAIR CLEANUP AND NATURAL EDGE REFINEMENT
+============================================================
 
-==================================================
-HAIR
-==================================================
+Perform detailed professional hair cleanup while strictly preserving the person's original hairstyle and identity.
 
-Preserve the exact original hairstyle.
+Carefully inspect the entire visible hair area and the complete outer hair silhouette from the crown down to the shoulders.
+
+REMOVE OR NATURALLY BLEND:
+
+- Clearly visible stray hairs.
+- Flyaway hairs sticking upward, outward, or away from the main hairstyle.
+- Isolated single strands extending into the background.
+- Small wispy hairs that make the outer hair contour appear untidy.
+- Short hairs sticking upward around the crown.
+- Loose or isolated strands around the center part.
+- Distracting stray hairs across the forehead.
+- Loose hairs around both temples.
+- Stray hairs around or behind both ears.
+- Isolated hairs along both outer sides of the hairstyle.
+- Loose strands around the cheeks and jawline.
+- Stray hairs extending across or beside the neck.
+- Loose hairs around the shoulders and clothing.
+- Clearly separated hair strands extending into the white background.
+
+CROWN AND TOP OF HEAD
+
+Carefully inspect the top of the head and crown.
+
+Remove or naturally blend short flyaway hairs that protrude above the main hair silhouette.
+
+Clean small irregular protrusions around the crown while preserving natural hair volume.
+
+Do not flatten the top of the hair.
+
+Do not change the natural shape of the head or hairstyle.
+
+PART AND HAIRLINE
+
+Preserve the person's original parting direction and natural hairline.
+
+Around the part, gently organize only irregular, isolated, or distracting strands.
+
+Preserve natural hair density and realistic individual hair texture.
+
+Do not artificially fill, redraw, lower, raise, or reshape the hairline.
+
+FOREHEAD AND TEMPLES
+
+Remove distracting loose strands or flyaways around the forehead and temples when they clearly appear separated from the intended hairstyle.
+
+Preserve natural baby hairs when they form part of the person's normal hairline.
+
+Do not aggressively erase fine natural hair.
+
+OUTER HAIR CONTOUR
+
+Carefully inspect both outer edges of the hairstyle.
+
+Remove isolated strands that visibly protrude into the background and make the silhouette appear untidy.
+
+Blend small irregular edge hairs naturally into the surrounding hairstyle when appropriate.
+
+Maintain a clean but realistic professional studio-photo hair contour.
+
+Do not create a hard cutout edge.
+
+Do not make the hair silhouette unnaturally smooth.
+
+FACE, JAW, NECK AND SHOULDERS
+
+Inspect hair around both cheeks, jawline, neck, collar, and shoulders.
+
+Remove or naturally blend clearly distracting loose strands that are detached from the main body of the hair.
+
+If a removed stray hair overlaps the face, neck, clothing, or background, reconstruct the underlying area naturally and seamlessly.
+
+Do not remove intentional locks of hair that form part of the hairstyle.
+
+PRESERVE NATURAL HAIR
 
 Preserve:
 
-- hairline
-- hair volume
-- hair length
-- overall hairstyle shape
+- the original hairstyle
+- haircut
+- bangs
+- parting direction
+- natural hairline
+- overall hair length
+- natural volume
+- natural waves
+- natural curls
+- major locks of hair
+- realistic individual hair texture
 
-Only clean small distracting flyaway hairs outside the main hairstyle.
+Do not remove large sections of hair.
 
-Do not restyle the hair.
+Do not shorten the hairstyle.
 
-Do not enlarge, shorten, lengthen, reshape, or redesign the hairstyle.
+Do not redesign or restyle the hair.
 
-Do not expose unnecessary forehead.
+Do not reshape the person's head.
+
+Do not make the left and right sides artificially symmetrical.
+
+Do not remove normal hair simply because it is slightly irregular.
+
+Do not make the hair painted, blurred, plastic, airbrushed, or artificially smooth.
+
+PRIORITY RULE
+
+Prioritize clearly distracting flyaways, isolated strands, and hairs protruding outside the intended hairstyle.
+
+Do not aggressively smooth or simplify the entire hairstyle.
+
+When uncertain whether a strand is an unwanted flyaway or part of the intentional hairstyle, preserve it.
 
 ==================================================
 EYEWEAR POLICY
@@ -632,21 +676,6 @@ Any reconstructed area must continue the original:
 - background
 
 naturally.
-
-==================================================
-GLOBAL POSITION PROTECTION
-==================================================
-
-Do not solve posture imbalance by simply translating the entire subject.
-
-Do not automatically recenter the entire person.
-
-Do not move the entire portrait sideways merely to correct one shoulder.
-
-Prefer local and anatomically natural posture correction.
-
-The face must remain naturally positioned for the destination crop.
-
 ==================================================
 ABSOLUTE PROHIBITIONS
 ==================================================
@@ -675,35 +704,6 @@ ABSOLUTE PROHIBITIONS
 - No glamour retouching.
 - No artificial mathematical symmetry.
 - No cartoon, illustration, or generated appearance.
-
-==================================================
-OUTPUT STANDARD
-==================================================
-
-The finished photograph must be:
-
-- embassy-ready
-- professional studio quality
-- realistic
-- natural
-- clean
-- properly lit
-- properly balanced
-- recognizably and unquestionably the same person
-
-The improvement should be immediately visible through:
-
-- better posture when needed
-- more natural shoulder balance
-- improved lighting
-- cleaner skin tone
-- controlled facial shadows
-- subtle eye cleanup
-- clean clothing
-- professional photographic finish
-
-The improvement must NOT come from changing the person's identity or natural anatomy.
-
 ==================================================
 QUALITY PRIORITY — HIGHEST TO LOWEST
 ==================================================

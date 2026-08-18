@@ -1,47 +1,67 @@
 import { NextResponse } from "next/server";
 import sharp from "sharp";
+
 import { validateImageUpload } from "@/lib/server/image-upload";
 import { sealPhoto } from "@/lib/server/secure-photo";
+import { enforceRateLimit } from "@/lib/server/rate-limit";
 
 export const runtime = "nodejs";
 
-function watermarkSvg(width: number, height: number) {
-  const safeWidth = Math.max(1, Math.round(width));
-  const safeHeight = Math.max(1, Math.round(height));
+function escapeXml(value: string) {
+  return value.replace(/[&<>"']/g, (char) => {
+    const entities: Record<string, string> = {
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&apos;",
+    };
 
-  const labels: string[] = [];
+    return entities[char] ?? char;
+  });
+}
 
-  for (let y = -safeHeight; y < safeHeight * 2; y += 92) {
-    for (let x = -safeWidth; x < safeWidth * 2; x += 250) {
-      labels.push(
-        `<text
+function createWatermarkSvg(width: number, height: number) {
+  const label = escapeXml("USVISAPHOTO PREVIEW");
+  const footer = escapeXml("USVISAPHOTO PROTECTED PREVIEW");
+
+  const marks: string[] = [];
+
+  const stepX = Math.max(180, Math.round(width * 0.38));
+  const stepY = Math.max(80, Math.round(height * 0.13));
+
+  for (let y = -height; y < height * 2; y += stepY) {
+    for (let x = -width; x < width * 2; x += stepX) {
+      marks.push(`
+        <text
           x="${x}"
           y="${y}"
+          font-family="Arial, Helvetica, sans-serif"
+          font-size="17"
+          font-weight="500"
           fill="#173c91"
           fill-opacity="0.13"
-          font-family="sans-serif"
-          font-size="22"
-          font-weight="700"
           transform="rotate(-24 ${x} ${y})"
-        >USVISAPHOTO PREVIEW</text>`
-      );
+        >${label}</text>
+      `);
     }
   }
 
-  const svg = `
+  return Buffer.from(
+    `
     <svg
+      width="${width}"
+      height="${height}"
+      viewBox="0 0 ${width} ${height}"
       xmlns="http://www.w3.org/2000/svg"
-      width="${safeWidth}"
-      height="${safeHeight}"
-      viewBox="0 0 ${safeWidth} ${safeHeight}"
     >
-      ${labels.join("")}
+      ${marks.join("")}
 
       <rect
         x="8"
         y="8"
-        width="${Math.max(1, safeWidth - 16)}"
-        height="${Math.max(1, safeHeight - 16)}"
+        width="${Math.max(0, width - 16)}"
+        height="${Math.max(0, height - 16)}"
         rx="10"
         fill="none"
         stroke="#60a5fa"
@@ -52,8 +72,8 @@ function watermarkSvg(width: number, height: number) {
 
       <rect
         x="14"
-        y="${Math.max(0, safeHeight - 48)}"
-        width="${Math.max(1, safeWidth - 28)}"
+        y="${Math.max(0, height - 48)}"
+        width="${Math.max(0, width - 28)}"
         height="34"
         fill="#111827"
         fill-opacity="0.58"
@@ -61,19 +81,44 @@ function watermarkSvg(width: number, height: number) {
 
       <text
         x="28"
-        y="${Math.max(16, safeHeight - 25)}"
+        y="${Math.max(17, height - 25)}"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="17"
+        font-weight="600"
         fill="#ffffff"
-        font-family="sans-serif"
-        font-size="16"
-      >USVisaPhoto Protected Preview</text>
+      >${footer}</text>
     </svg>
-  `;
-
-  return Buffer.from(svg, "utf8");
+    `,
+    "utf8"
+  );
 }
 
 export async function POST(req: Request) {
+  const limited = enforceRateLimit(
+    req,
+    "secure-photo",
+    24,
+    10 * 60_000
+  );
+
+  if (limited) {
+    return limited;
+  }
+
   try {
+    const contentType = req.headers.get("content-type") ?? "";
+
+    if (!contentType.toLowerCase().includes("multipart/form-data")) {
+      return NextResponse.json(
+        {
+          error: "Use multipart form data for image uploads.",
+        },
+        {
+          status: 415,
+        }
+      );
+    }
+
     const formData = await req.formData();
 
     const validation = validateImageUpload(
@@ -95,55 +140,65 @@ export async function POST(req: Request) {
       await validation.file.arrayBuffer()
     );
 
-    /*
-     * 입력 이미지 자체가 Sharp에서 정상적으로 읽히는지
-     * 먼저 확인한다.
-     */
-    const metadata = await sharp(buffer).metadata();
+   let metadata;
 
-    const width =
-      metadata.width && metadata.width > 0
-        ? metadata.width
-        : 600;
+try {
+  metadata = await sharp(buffer).metadata();
+} catch {
+      return NextResponse.json(
+        {
+          error: "The uploaded image could not be decoded.",
+        },
+        {
+          status: 415,
+        }
+      );
+    }
 
-    const height =
-      metadata.height && metadata.height > 0
-        ? metadata.height
-        : 600;
+    const width = metadata.width;
+    const height = metadata.height;
 
-    /*
-     * SVG 워터마크를 PNG로 한 번 변환한 뒤
-     * 원본 이미지 위에 composite 한다.
-     *
-     * Sharp가 SVG Buffer를 직접 composite하면서
-     * unsupported image format 오류를 내는 환경을 방지한다.
-     */
-   const watermarkBuffer = await sharp(
-  watermarkSvg(width, height)
-)
-  .resize(width, height, {
-    fit: "fill",
-  })
-  .png()
-  .toBuffer();
+    if (!width || !height) {
+      return NextResponse.json(
+        {
+          error: "Unable to determine image dimensions.",
+        },
+        {
+          status: 415,
+        }
+      );
+    }
+
+    const watermark = createWatermarkSvg(width, height);
 
     const preview = await sharp(buffer)
+      .rotate()
       .composite([
         {
-          input: watermarkBuffer,
+          input: watermark,
           blend: "over",
         },
       ])
-      .jpeg({
-        quality: 86,
-        chromaSubsampling: "4:4:4",
+      .png({
+        compressionLevel: 9,
+        adaptiveFiltering: true,
       })
       .toBuffer();
+
+    console.log("SECURE_PHOTO_QA", {
+      inputWidth: width,
+      inputHeight: height,
+      inputFormat: metadata.format ?? "unknown",
+      previewFormat: "png",
+      inputBytes: buffer.length,
+      previewBytes: preview.length,
+    });
 
     return NextResponse.json(
       {
         token: sealPhoto(buffer),
-        preview: `data:image/jpeg;base64,${preview.toString(
+
+        preview: `data:image/png;base64,${preview.toString(
           "base64"
         )}`,
       },
@@ -154,24 +209,15 @@ export async function POST(req: Request) {
       }
     );
   } catch (error) {
-  console.error("SECURE PHOTO ERROR:", error);
+    console.error("SECURE PHOTO ERROR:", error);
 
-  const message =
-    error instanceof Error
-      ? error.message
-      : String(error);
-
-  return NextResponse.json(
-    {
-      error: "Photo protection failed.",
-      detail: message,
-    },
-    {
-      status: 500,
-      headers: {
-        "Cache-Control": "no-store",
+    return NextResponse.json(
+      {
+        error: "Photo protection failed.",
       },
-    }
-  );
-}
+      {
+        status: 500,
+      }
+    );
+  }
 }

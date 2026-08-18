@@ -120,15 +120,22 @@ export async function POST(req: NextRequest) {
        * restores a little edge clarity without changing skin tone, facial
        * geometry, or introducing the crunchy halos of strong sharpening.
        */
-      .sharpen({ sigma: 0.45 })
-      .jpeg({
-        quality: 98,
-        chromaSubsampling: '4:4:4',
-        mozjpeg: true,
-      })
-      .withMetadata({
-        density: 300,
-      })
+      .sharpen({
+  sigma: 0.8,
+  m1: 0.8,
+  m2: 1.4,
+  x1: 2.0,
+  y2: 10,
+  y3: 20,
+})
+.jpeg({
+  quality: 98,
+  chromaSubsampling: '4:4:4',
+  mozjpeg: true,
+})
+.withMetadata({
+  density: 300,
+})
       .toBuffer();
 
     return new NextResponse(

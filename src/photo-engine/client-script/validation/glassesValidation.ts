@@ -1621,7 +1621,21 @@ const glassesDetected =
   const bridgeIndependentEvidence =
     templeEvidence && reflectionEvidence && frameEvidence;
 
-  const needsEyewearReview = glassesDetected;
+  const needsEyewearReview =
+  glassesDetected ||
+  bilateralLowContrastFrame ||
+  bilateralEyewearSignature ||
+  subtleBilateralEyewearSignature ||
+  bridgeIndependentEvidence ||
+  (
+    bridgeCorroborated &&
+    (
+      leftFrame.detectedSegments >= 1 ||
+      rightFrame.detectedSegments >= 1 ||
+      leftFrame.outerDetected ||
+      rightFrame.outerDetected
+    )
+  );
 
     console.log("EYEWEAR REVIEW DEBUG", {
   glassesDetected,

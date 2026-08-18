@@ -33,6 +33,7 @@ const canvas = document.getElementById('result-canvas');
 const overlayCanvas = document.getElementById('overlay-canvas');
 const statusEl = document.getElementById('status');
 const resultPanel = document.getElementById('resultPanel');
+const eruLongArrow = document.querySelector('.eru-long-arrow');
 const uploadTips = document.getElementById('uploadTips');
 const validationCard = document.getElementById('validation-card');
 const checkFace = document.getElementById('check-face');
@@ -43,7 +44,8 @@ const checkEyebrows = document.getElementById('check-eyebrows');
 const checkPosition = document.getElementById('check-position');
 const validationFinal = document.getElementById('validation-final');
 const professionalCard = document.getElementById('professional-retouch-card');
-const expertCard = document.getElementById('expert-edit-card');  
+const eruScrollBtn = document.getElementById('eru-scroll-btn');
+const expertCard = document.getElementById('expert-edit-card');
 const ctx = canvas.getContext('2d');
 const PENDING_PAYMENT_KEY = 'usvisa_pending_payment';
 const ACTIVE_PAYMENT_RETURN_KEY = 'usvisa_active_payment_return';
@@ -341,7 +343,14 @@ function updateProfessionalPackageButton() {
 
   const totalPriceEl =
     document.getElementById('eru-total-price');
+   
+  const mainPriceEl =
+  document.getElementById('eru-main-price');
 
+if (mainPriceEl) {
+  mainPriceEl.textContent = totalText;
+}
+    
   if (totalPriceEl) {
     totalPriceEl.innerHTML =
       'Total · <strong>' +
@@ -675,6 +684,8 @@ let guideMode = 'auto';
 let uploadedFile = null;
 let uploadedImg = null;
 let bgRemovedImg = null;
+let localEruFinalJpg = null;
+let localEruExtraPhotos = [];
 let detectedLm = null;
 let lockedDetection = null;
 let resultUrl = null;
@@ -775,7 +786,7 @@ function setDetectButtonState(state){
 
 case 'warning':
   detectBtn.classList.add('detect-manual');
-  detectBtn.textContent = 'REVIEW';
+  detectBtn.textContent = 'REVIEW & CONTINUE ✓';
   detectBtn.disabled = false;
   detectBtn.style.cursor = 'pointer';
   detectBtn.style.background = '#f59e0b';
@@ -1038,7 +1049,15 @@ if (professionalCard) {
 if (expertCard) {
   expertCard.style.display = "block";
 }
+const eruLongArrow = document.querySelector('.eru-long-arrow');
+if (eruLongArrow) {
+  eruLongArrow.style.display = 'none';
+}
 
+const eruIncludedNote = document.getElementById('eru-included-note');
+if (eruIncludedNote) {
+  eruIncludedNote.style.display = 'none';
+}
   if (validationCard) {
     validationCard.style.display = 'block';
     validationCard.className =
@@ -1057,18 +1076,22 @@ if (expertCard) {
 
       '<hr style="margin:14px 0;">' +
 
-      '<div style="color:#047857;font-weight:700;">' +
-        '✓ Professional Retouch can automatically reconstruct ' +
-        'missing shoulders and upper body.' +
-      '</div>';
+      '<div style="margin-top:12px;padding:10px 12px;background:#fff7ed;border:1px solid #fdba74;border-radius:10px;color:#c2410c;font-weight:900;font-size:14px;">' +
+  '↑ Click REVIEW above to continue' +
+'</div>' +
+
+'<div style="margin-top:10px;color:#047857;font-weight:700;">' +
+  '✓ Embassy-Ready Upgrade can prepare recoverable photo issues before payment.' +
+'</div>';
 if (detectBtn) {
   detectBtn.disabled = false;
-  detectBtn.textContent = "2. Professional Retouch · $9.99";
+ detectBtn.textContent = "REVIEW & CONTINUE ✓";
   detectBtn.style.background = "#f59e0b";
   detectBtn.style.color = "#ffffff";
   detectBtn.style.cursor = "pointer";
 
-  // REVIEW never starts E.R.U. The user must explicitly press its button.
+  // REVIEW navigation is handled by the main
+  // detectBtn addEventListener below.
   detectBtn.onclick = null;
 }
 
@@ -1140,14 +1163,13 @@ function restoreStoredAutoDetectResult() {
     photoValidationPassed = false;
     autoDetectLocked = true;
 
-    showValidationRecoverable(
-      storedAutoDetect.message ||
-      'This photo is eligible for Professional Retouch or Expert Manual Editing.'
-    );
-
     setDetectButtonState('warning');
-    setCreateEnabled(false);
+setCreateEnabled(false);
 
+showValidationRecoverable(
+  storedAutoDetect.message ||
+  'This photo is eligible for Professional Retouch or Expert Manual Editing.'
+);
     if (createBtn) {
       createBtn.style.display = 'none';
     }
@@ -2908,6 +2930,8 @@ if (checkMouth) {
     validation.failureReason === 'glassesAndTeeth' ||
     validation.failureReason === 'glassesReview';
 
+  window.usvisaEyewearDetected = glassesDetected;
+  
   checkGlasses.textContent =
     glassesDetected
       ? '🟠 Eyeglasses detected — Embassy-Ready Upgrade recommended'
@@ -3007,21 +3031,28 @@ return false;
 detectBtn.addEventListener('click', async function(e) {
   e.preventDefault();
 
-  // REVIEW 상태에서 버튼을 누르면 E.R.U 영역으로 이동
-  if (detectBtn.textContent?.trim() === 'REVIEW') {
-    const eruSection = document.getElementById(
-      'professional-retouch-card'
-    );
-
-    if (eruSection) {
-      eruSection.scrollIntoView({
-        behavior: 'smooth',
-        block: 'start'
-      });
-    }
-
-    return;
+// REVIEW 상태: 한 번만 실행하고 E.R.U 영역으로 이동
+if (detectBtn.textContent?.includes('REVIEW')) {
+  if (resultPanel) {
+    resultPanel.style.display = 'block';
   }
+
+  if (professionalCard) {
+    professionalCard.style.display = 'block';
+
+    requestAnimationFrame(() => {
+      professionalCard.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    });
+  }
+
+  // REVIEW는 이미 완료됐으므로 버튼 제거
+  detectBtn.style.display = 'none';
+
+  return;
+}
 
   if (restoreStoredAutoDetectResult()) {
     return;
@@ -3212,6 +3243,8 @@ function runFaceMeshOnce(image) {
         }
       });
     }
+
+window.runFaceMeshOnce = runFaceMeshOnce;    
 
 function runPoseOnce(image) {
   return new Promise(async function(resolve, reject) {
@@ -3488,12 +3521,12 @@ if (poseRecoverable) {
     recoverableMessage
   );
 
-  showValidationRecoverable(
-    recoverableMessage
-  );
+ setDetectButtonState('warning');
+setCreateEnabled(false);
 
-  setDetectButtonState('warning');
-  setCreateEnabled(false);
+showValidationRecoverable(
+  recoverableMessage
+);
 
   if (createBtn) {
     createBtn.style.display = 'none';
@@ -3776,7 +3809,29 @@ function drawFinalPhoto(sourceImg) {
   }
 
   const currentHeadPx = Math.max(1, chinY - crownY);
-const scale = (TARGET_HEAD_PX * 0.9) / currentHeadPx;
+const headScaleCalibration =
+  format === 'us' ||
+  format === '2x2' ||
+  (
+    format === 'country-default' &&
+    String(
+      window.EMBASSY_PHOTO_PROFILE?.code || ''
+    ).toUpperCase() === 'US'
+  )
+    ? 0.765625
+    : (
+        format === 'international' ||
+        format === '35x45'
+      )
+      ? (32 / 37)
+      : 1;
+
+const scale =
+  (
+    targetHeadPx /
+    currentHeadPx
+  ) *
+  headScaleCalibration;
 
   const sourceWidth = sourceImg.naturalWidth || sourceImg.width;
   const centerX = sourceWidth / 2;
@@ -3796,7 +3851,7 @@ const scale = (TARGET_HEAD_PX * 0.9) / currentHeadPx;
   ctx.fillRect(0, 0, TARGET, TARGET_HEIGHT);
 
   ctx.save();
-  ctx.translate(TARGET / 2, TOP_MARGIN_PX + 32);
+  ctx.translate(TARGET / 2, TOP_MARGIN_PX + 12);
   ctx.rotate(-resolveLockedAlignmentAngle(lockedDetection));
   ctx.scale(scale, scale);
   ctx.drawImage(sourceImg, -finalCenterX, -crownY);
@@ -3869,7 +3924,7 @@ const faceHeightPx =
 const faceHeightMm =
     (faceHeightPx / H) * Number(COUNTRY_PROFILE.heightMm || 50.8);
 const faceHeightLabel = COUNTRY_CODE === 'US'
-  ? (faceHeightMm / 25.4).toFixed(2) + ' in'
+  ? (faceHeightMm / 25.4).toFixed(1) + ' in'
   : Math.round(faceHeightMm) + ' mm';
 
   octx.strokeStyle="#58d6b4";
@@ -3926,7 +3981,7 @@ const faceHeightLabel = COUNTRY_CODE === 'US'
 
   octx.fillText(
       faceHeightLabel,
-      measureX-10,
+      measureX-17,
       (headTop+headBottom)/2+6
   );
 
@@ -4017,8 +4072,280 @@ const faceHeightLabel = COUNTRY_CODE === 'US'
 
 }
  
+async function measureProfessionalFaceGeometry(sourceInput) {
+  let sourceImage = sourceInput;
 
-// 여기에 전체 함수 붙여넣기
+  if (typeof sourceInput === 'string') {
+    sourceImage = await new Promise(function(resolve, reject) {
+      const image = new Image();
+
+      image.onload = function() {
+        resolve(image);
+      };
+
+      image.onerror = function() {
+        reject(
+          new Error(
+            'E.R.U MASTER could not be loaded for face measurement.'
+          )
+        );
+      };
+
+      image.src = sourceInput;
+    });
+  }
+
+  if (
+    !sourceImage ||
+    !sourceImage.naturalWidth ||
+    !sourceImage.naturalHeight
+  ) {
+    throw new Error(
+      'E.R.U MASTER is invalid for face measurement.'
+    );
+  }
+
+  const width =
+    sourceImage.naturalWidth ||
+    sourceImage.width;
+
+  const height =
+    sourceImage.naturalHeight ||
+    sourceImage.height;
+
+  const canvas =
+    document.createElement('canvas');
+
+  canvas.width = width;
+  canvas.height = height;
+
+  const context =
+    canvas.getContext('2d');
+
+  if (!context) {
+    throw new Error(
+      'E.R.U face measurement canvas is unavailable.'
+    );
+  }
+
+  context.drawImage(
+    sourceImage,
+    0,
+    0,
+    width,
+    height
+  );
+
+  // 기존 Auto Detect와 동일하게 warm-up 후 실제 측정
+ await runFaceMeshOnce(canvas);
+
+  await new Promise(function(resolve) {
+    setTimeout(resolve, 150);
+  });
+
+  const detected =
+  await runFaceMeshOnce(canvas);
+
+  if (
+    !detected ||
+    !detected.multiFaceLandmarks ||
+    detected.multiFaceLandmarks.length !== 1
+  ) {
+    throw new Error(
+      'E.R.U MASTER face geometry could not be measured.'
+    );
+  }
+
+  const lm =
+    detected.multiFaceLandmarks[0];
+
+  const validation =
+    validateDetectedPhoto(
+      lm,
+      width,
+      height,
+      sourceImage
+    );
+
+  if (!validation) {
+    throw new Error(
+      'E.R.U MASTER face validation failed.'
+    );
+  }
+
+  const crownY =
+    Number.isFinite(validation.layoutCrownY)
+      ? validation.layoutCrownY
+      : validation.estimatedCrownY;
+
+  const chinY =
+    validation.detectedChinY;
+
+  if (
+    !Number.isFinite(crownY) ||
+    !Number.isFinite(chinY) ||
+    chinY <= crownY
+  ) {
+    throw new Error(
+      'E.R.U MASTER crown/chin geometry is invalid.'
+    );
+  }
+
+  const faceCenterX =
+  getFaceCenterX(
+    lm,
+    width,
+    width / 2
+  );
+
+/*
+ * E.R.U 결과 이미지 자체의 수평을 다시 측정한다.
+ *
+ * FaceMesh:
+ * 33  = 한쪽 눈 바깥쪽
+ * 263 = 반대쪽 눈 바깥쪽
+ *
+ * OpenAI retouch 이후 발생할 수 있는 미세한 회전을
+ * 최종 규격 생성 단계에서 바로잡기 위한 값이다.
+ */
+
+
+ /*
+ * E.R.U 결과 이미지 자체의 수평을 다시 측정한다.
+ *
+ * 한쪽 눈의 단일 랜드마크끼리 비교하지 않고
+ * 각 눈의 여러 랜드마크 평균 중심을 사용한다.
+ * 개인의 자연스러운 눈꼬리 모양이나 미세 비대칭이
+ * 사진 전체 회전으로 잘못 해석되는 것을 줄인다.
+ */
+const leftEyeIndices = [
+  33, 133, 159, 145
+];
+
+const rightEyeIndices = [
+  263, 362, 386, 374
+];
+
+function getEyeCenter(indices) {
+  const points = indices
+    .map(function(index) {
+      return lm[index];
+    })
+    .filter(Boolean);
+
+  if (!points.length) {
+    return null;
+  }
+
+  const sum = points.reduce(
+    function(acc, point) {
+      acc.x += point.x;
+      acc.y += point.y;
+      return acc;
+    },
+    { x: 0, y: 0 }
+  );
+
+  return {
+    x: (sum.x / points.length) * width,
+    y: (sum.y / points.length) * height,
+  };
+}
+
+const leftEyeCenter =
+  getEyeCenter(leftEyeIndices);
+
+const rightEyeCenter =
+  getEyeCenter(rightEyeIndices);
+
+let faceTiltAngle = 0;
+let measuredEyeAngle = 0;
+
+if (
+  leftEyeCenter &&
+  rightEyeCenter
+) {
+  const eyeDx =
+    rightEyeCenter.x -
+    leftEyeCenter.x;
+
+  const eyeDy =
+    rightEyeCenter.y -
+    leftEyeCenter.y;
+
+  if (Math.abs(eyeDx) > 1) {
+    measuredEyeAngle =
+      Math.atan2(
+        eyeDy,
+        eyeDx
+      );
+
+    const measuredDegrees =
+      measuredEyeAngle *
+      180 /
+      Math.PI;
+
+    /*
+     * 0.35° 이하는 FaceMesh 측정 오차나
+     * 자연스러운 좌우 눈 비대칭으로 간주한다.
+     *
+     * E.R.U에서는 눈을 억지로 완벽한 수평으로
+     * 만드는 것이 아니라 사진의 명확한 기울기만 보정한다.
+     */
+    const deadZoneDegrees = 0.35;
+
+    /*
+     * E.R.U retouch 이후의 미세 회전만 바로잡는다.
+     * 과도한 자동 회전을 방지하기 위해 ±2°로 제한한다.
+     */
+    const maxCorrectionDegrees = 2.0;
+
+    if (
+      Math.abs(measuredDegrees) >
+      deadZoneDegrees
+    ) {
+      const limitedDegrees =
+        Math.max(
+          -maxCorrectionDegrees,
+          Math.min(
+            maxCorrectionDegrees,
+            measuredDegrees
+          )
+        );
+
+      faceTiltAngle =
+        limitedDegrees *
+        Math.PI /
+        180;
+    }
+  }
+}
+
+console.log('ERU_MASTER_FACE_QA', {
+  sourceWidth: width,
+  sourceHeight: height,
+  crownY,
+  chinY,
+  headPixels: chinY - crownY,
+  faceCenterX,
+  measuredEyeDegrees:
+  measuredEyeAngle * 180 / Math.PI,
+faceTiltAngle,
+faceTiltDegrees:
+  faceTiltAngle * 180 / Math.PI,
+});
+
+return {
+  sourceImage,
+  width,
+  height,
+  crownY,
+  chinY,
+  faceCenterX,
+  faceTiltAngle,
+  landmarks: lm,
+};
+}
 async function createProfessionalAlignedPhoto(sourceInput) {
   if (!lockedDetection) {
     throw new Error(
@@ -4182,29 +4509,42 @@ async function createInternationalPhotoFromResult(sourceUrl, requestedSize) {
    * 이 좌표를 기준으로 국제 규격 엔진에 다시 배치한다.
    * 가로와 세로를 따로 늘리지 않으므로 인물 비율이 유지된다.
    */
-  const usCanvasWidth = Number(COUNTRY_PROFILE.pixelWidth || 600);
-  const usCanvasSize = Number(COUNTRY_PROFILE.pixelHeight || 600);
-  const usPhysicalHeightMm = Number(COUNTRY_PROFILE.heightMm || 50.8);
-  const usTopMarginMm = Number(COUNTRY_PROFILE.topMarginMm || 5);
-  const usHeadLengthMm = Number(COUNTRY_PROFILE.headHeightMm || 28);
+ const sourceImage = await new Promise(function (resolve, reject) {
+  const image = new Image();
 
-  const usCrownY =
-    usCanvasSize *
-    (
-      usTopMarginMm /
-      usPhysicalHeightMm
-    );
+  image.onload = function () {
+    resolve(image);
+  };
 
-  const usHeadHeightPx =
-    usCanvasSize *
-    (
-      usHeadLengthMm /
-      usPhysicalHeightMm
-    );
+  image.onerror = reject;
+  image.src = sourceUrl;
+});
 
-  const usChinY =
-    usCrownY +
-    usHeadHeightPx;
+const usCanvasWidth =
+  sourceImage.naturalWidth || sourceImage.width;
+
+const usCanvasHeight =
+  sourceImage.naturalHeight || sourceImage.height;
+
+/*
+ * E.R.U final U.S. photo geometry
+ *
+ * The E.R.U result reaching this function is already the
+ * finished U.S. 2x2 composition.
+ *
+ * Crown position: 5 mm from top
+ * Crown-to-chin: 28 mm
+ * Physical canvas: 50.8 mm
+ */
+
+const usCrownY =
+  usCanvasHeight * (5 / 50.8);
+
+const usHeadHeightPx =
+  usCanvasHeight * (28 / 50.8);
+
+const usChinY =
+  usCrownY + usHeadHeightPx;
 
   return await window.createProfessionalPhotoLayout({
     sourceInput: sourceUrl,
@@ -4242,28 +4582,55 @@ async function createAdditionalPhotoFromOriginal(requestedSize) {
   });
 }
 
-async function createCountryProfessionalPhotoFromAi(sourceUrl) {
-  const sourceImage = await new Promise(function(resolve, reject) {
-    const image = new Image();
-    image.onload = function() { resolve(image); };
-    image.onerror = reject;
-    image.src = sourceUrl;
-  });
-  const sourceWidth = sourceImage.naturalWidth || sourceImage.width;
-  const sourceHeight = sourceImage.naturalHeight || sourceImage.height;
-  const crownY = sourceHeight * (5 / 50.8);
-  const chinY = crownY + sourceHeight * (28 / 50.8);
+async function createCountryProfessionalPhotoFromAi(
+  sourceUrl
+) {
+  const geometry =
+    await measureProfessionalFaceGeometry(
+      sourceUrl
+    );
+
   return await window.createProfessionalPhotoLayout({
-    sourceInput: sourceImage,
+    sourceInput: geometry.sourceImage,
     format: 'country-default',
-    crownY,
-    chinY,
-    faceCenterX: sourceWidth / 2,
-    faceTiltAngle: 0,
+    crownY: geometry.crownY,
+    chinY: geometry.chinY,
+    faceCenterX: geometry.faceCenterX,
+    faceTiltAngle: geometry.faceTiltAngle,
+  });
+}
+ async function createProfessionalExtraPhotoFromAi(
+  sourceUrl,
+  requestedSize
+) {
+  const geometry =
+    await measureProfessionalFaceGeometry(
+      sourceUrl
+    );
+
+  return await window.createProfessionalPhotoLayout({
+    sourceInput: geometry.sourceImage,
+    format: requestedSize,
+    crownY: geometry.crownY,
+    chinY: geometry.chinY,
+    faceCenterX: geometry.faceCenterX,
+    faceTiltAngle: geometry.faceTiltAngle,
   });
 }
 let createPhotoBusy = false;
 
+if (eruScrollBtn) {
+  eruScrollBtn.addEventListener('click', function() {
+    if (!professionalCard) {
+      return;
+    }
+
+    professionalCard.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start',
+    });
+  });
+}
 createBtn.addEventListener('click', async function(e) {
   e.preventDefault();
 
@@ -4623,6 +4990,8 @@ if (professionalRetouchBtn) {
   if (professionalRetouchBusy) {
     return;
   }
+    localEruFinalJpg = null;
+localEruExtraPhotos = [];
 
    const savedProfessionalPhoto =
     readStoredPhoto('usvisa_secure_professional_photo') ||
@@ -4766,39 +5135,73 @@ if (recoverable) {
     'Professional Retouch will reconstruct the missing shoulder area.';
 }
 
-const sourceImage =
-  recoverable
-    ? uploadedImg?.src
-    : (
-        typeof bgRemovedImg === 'string'
-          ? bgRemovedImg
-          : bgRemovedImg?.src || uploadedImg?.src
-      );
-
-console.log('Recoverable:', recoverable);
-console.log('SOURCE IMAGE:', sourceImage);
-
-if (!sourceImage || typeof sourceImage !== 'string') {
+/*
+ * E.R.U SOURCE
+ *
+ * Professional Retouch must start from the ORIGINAL uploaded
+ * high-resolution photo.
+ *
+ * Do NOT run the U.S. 2x2 layout before E.R.U.
+ * Do NOT use bgRemovedImg or any 600x600 derivative here.
+ */
+if (!uploadedFile) {
   throw new Error(
-    'Professional Retouch source image could not be prepared.'
+    'Original uploaded file is unavailable for Embassy-Ready Upgrade.'
   );
 }
 
+const professionalBlob = uploadedFile;
 
-const professionalAlignedUrl =
-  await createProfessionalAlignedPhoto(sourceImage);
+console.log('Recoverable:', recoverable);
 
-const professionalBlob =
-  await fetch(professionalAlignedUrl).then((res) =>
-    res.blob()
+console.log('ERU_SOURCE', {
+  source: 'ORIGINAL_UPLOADED_FILE',
+  fileName: professionalBlob.name,
+  fileType: professionalBlob.type,
+  fileBytes: professionalBlob.size,
+});
+
+const eruSourceProbeUrl =
+  URL.createObjectURL(professionalBlob);
+
+try {
+  const eruSourceProbe =
+    await new Promise(function(resolve, reject) {
+      const image = new Image();
+
+      image.onload = function() {
+        resolve(image);
+      };
+
+      image.onerror = function() {
+        reject(
+          new Error(
+            'Original E.R.U source image could not be decoded.'
+          )
+        );
+      };
+
+      image.src = eruSourceProbeUrl;
+    });
+
+  console.log(
+    'ERU_SOURCE_IMAGE_SIZE =',
+    eruSourceProbe.naturalWidth,
+    eruSourceProbe.naturalHeight
   );
+} finally {
+  URL.revokeObjectURL(
+    eruSourceProbeUrl
+  );
+}
 
 const formData = new FormData();
 
 formData.append(
   'image',
   professionalBlob,
-  'professional-aligned-photo.jpg'
+  professionalBlob.name ||
+    'eru-original-source.jpg'
 );
 formData.append('countryCode', COUNTRY_CODE);
 
@@ -4806,7 +5209,20 @@ const eyebrowClearanceRequired =
   COUNTRY_CODE === 'KR' ||
   (COUNTRY_CODE === 'US' && getSelectedProfessionalExtraSize() === '35x45');
 formData.append('eyebrowClearanceRequired', eyebrowClearanceRequired ? 'true' : 'false');
-formData.append('removeEyewearRequired', GLASSES_RULE_ENABLED ? 'true' : 'false');
+const removeEyewearRequired =
+  GLASSES_RULE_ENABLED &&
+  window.usvisaEyewearDetected === true;
+
+formData.append(
+  'removeEyewearRequired',
+  removeEyewearRequired ? 'true' : 'false'
+);
+
+console.log('E.R.U EYEWEAR REMOVAL:', {
+  GLASSES_RULE_ENABLED,
+  usvisaEyewearDetected: window.usvisaEyewearDetected,
+  removeEyewearRequired
+});
 const shoulderRecoveryRequired =
  recoverable || Boolean(
     lockedDetection &&
@@ -4853,8 +5269,13 @@ if (!data.professionalPreview) {
 
 const countryProfessionalPhoto =
   await createCountryProfessionalPhotoFromAi(data.professionalPreview);
+
 const finalProfessionalJpg =
   await createFinalJpegWithSharp(countryProfessionalPhoto);
+
+if (isLocalAdminEnvironment()) {
+  localEruFinalJpg = finalProfessionalJpg;
+}
 const securedProfessionalPhoto = await protectPhotoForCheckout(finalProfessionalJpg);
 const protectedProfessionalPreview = isLocalAdminEnvironment()
   ? await createProtectedProfessionalPreview(finalProfessionalJpg)
@@ -4881,11 +5302,11 @@ const securedProfessionalExtraPhotos = [];
 for (
   const sizeKey of selectedProfessionalExtraSizes
 ) {
-  const extraPhoto =
-    await createInternationalPhotoFromResult(
-      finalProfessionalJpg,
-      sizeKey
-    );
+ const extraPhoto =
+  await createProfessionalExtraPhotoFromAi(
+    data.professionalPreview,
+    sizeKey
+  );
 
   if (!extraPhoto) {
     continue;
@@ -4908,6 +5329,12 @@ for (
     sizeKey: sizeKey,
     token: securedExtra.token
   });
+  if (isLocalAdminEnvironment()) {
+  localEruExtraPhotos.push({
+    sizeKey: sizeKey,
+    url: extraPhoto
+  });
+}
 }
 
 /*
@@ -4999,24 +5426,81 @@ if (retouchPreview) {
   retouchPreview.style.removeProperty('display');
   retouchPreview.classList.add('is-visible');
 }
-  // E.R.U preview is ready: Basic checkout must no longer be available.
+ // E.R.U preview is ready: Basic checkout must no longer be available.
+// LOCAL TEST ONLY: download E.R.U final JPG + selected extra sizes.
 if (downloadBtn) {
-  downloadBtn.style.display = 'none';
+  if (isLocalAdminEnvironment() && localEruFinalJpg) {
+    downloadBtn.style.display = 'block';
+    downloadBtn.disabled = false;
+
+    downloadBtn.textContent =
+      localEruExtraPhotos.length > 0
+        ? 'Download E.R.U Final + Selected Sizes'
+        : 'Download E.R.U Final JPG';
+
+    downloadBtn.onclick = async function (e) {
+    console.log("=== ERU DOWNLOAD CLICKED ===", {
+  localEruFinalJpgType: typeof localEruFinalJpg,
+  localEruFinalJpgLength: localEruFinalJpg?.length,
+  localEruFinalJpgStart: localEruFinalJpg?.slice(0, 50),
+  extraPhotos: localEruExtraPhotos?.length
+});
+      e.preventDefault();
+      e.stopPropagation();
+
+      // Main E.R.U final
+      const mainLink = document.createElement('a');
+      mainLink.href = localEruFinalJpg;
+      mainLink.download = 'USVisaPhoto-ERU-Final.jpg';
+
+      document.body.appendChild(mainLink);
+      mainLink.click();
+      mainLink.remove();
+
+      // Selected E.R.U extra sizes
+      for (const item of localEruExtraPhotos) {
+        await new Promise(function (resolve) {
+          setTimeout(resolve, 300);
+        });
+
+        const extraLink = document.createElement('a');
+
+        extraLink.href = item.url;
+        extraLink.download =
+          'USVisaPhoto-ERU-' +
+          String(item.sizeKey).replace(/[^a-zA-Z0-9._-]/g, '-') +
+          '.jpg';
+
+        document.body.appendChild(extraLink);
+        extraLink.click();
+        extraLink.remove();
+      }
+    };
+  } else {
+    downloadBtn.style.display = 'none';
+  }
 }
-  if (premiumCreateBtn) {
-  const withInternational =
-    professionalInternationalCheckbox &&
-    professionalInternationalCheckbox.checked;
+  
+ if (premiumCreateBtn) {
+  if (isLocalAdminEnvironment() && localEruFinalJpg) {
+    // LOCAL TEST:
+    // E.R.U generation is complete, so do not show checkout.
+    premiumCreateBtn.style.display = 'none';
+    premiumCreateBtn.disabled = true;
+  } else {
+    const withInternational =
+      professionalInternationalCheckbox &&
+      professionalInternationalCheckbox.checked;
 
-  premiumCreateBtn.style.display = 'block';
-  premiumCreateBtn.disabled = false;
+    premiumCreateBtn.style.display = 'block';
+    premiumCreateBtn.disabled = false;
 
-  premiumCreateBtn.textContent =
-    withInternational
-      ? '🔓 Unlock Embassy-Ready Photos · $12.99'
-      : '🔓 Unlock Embassy-Ready Photo · $9.99';
+    premiumCreateBtn.textContent =
+      withInternational
+        ? '🔐 Unlock Embassy-Ready Photos · $12.99'
+        : '🔐 Unlock Embassy-Ready Photo · $9.99';
+  }
 }
-
 
 if (expertCard && professionalCard) {
 
@@ -5187,6 +5671,9 @@ expertEditBtn?.addEventListener('click', async function () {
 });
 
 downloadBtn.addEventListener('click', async function() {
+  if (isLocalAdminEnvironment() && localEruFinalJpg) {
+    return;
+  }
   const searchParams = new URLSearchParams(
   window.parent.location.search
 );
@@ -5215,23 +5702,7 @@ if (
   return;
 }
 
-if (isLocalAdminEnvironment()) {
-  const adminCleanPhoto = getCleanPhotoForDownload();
 
-  if (!isFinalJpegPhoto(adminCleanPhoto)) {
-    statusEl.textContent =
-      'The clean JPG is still preparing. Please create the photo again.';
-    return;
-  }
-
-  triggerAdminFileDownload(
-    dataUrlToBlob(adminCleanPhoto),
-    'basic-korea-passport-' + getAdminDownloadTimestamp() + '.jpg'
-  );
-  statusEl.textContent =
-    'Local admin test file downloaded. Checkout was not opened.';
-  return;
-}
 
 if (isPaid) {
   const count = getPaidDownloadCount();
@@ -5294,6 +5765,18 @@ if (isPaid) {
     getPaidSuccessMessage(paidProduct, nextCount);
 
   updatePaidDownloadButton(nextCount, paidProduct);
+  return;
+}
+
+if (isLocalAdminEnvironment() && resultUrl) {
+  const link = document.createElement('a');
+  link.href = resultUrl;
+  link.download = 'USVisaPhoto-Final.jpg';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+
+  statusEl.textContent = 'Local test: Final clean JPG downloaded.';
   return;
 }
 

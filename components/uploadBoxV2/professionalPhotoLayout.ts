@@ -8,7 +8,7 @@ const PROFESSIONAL_PHOTO_SPECS = Object.freeze({
     physicalHeightMm: 50.8,
 
     // 정수리부터 턱까지 2.8cm
-    headLengthMm: 28,
+    headLengthMm: 24.5,
 
     /*
  * crownY 검출점이 실제 머리카락 최상단보다 아래로 잡히는 오차 보정.
@@ -44,7 +44,7 @@ const PROFESSIONAL_PHOTO_SPECS = Object.freeze({
    * 32 ÷ 30 = 약 1.0667
    * 32 × 1.0667 = 약 34.13mm
    */
-  headLengthMm: 28,
+  headLengthMm: 24.2,
 
   topMarginMm: 5.5,
 
@@ -52,14 +52,14 @@ const PROFESSIONAL_PHOTO_SPECS = Object.freeze({
 
   jpegQuality: 0.99,
 }),
-  '35x45': Object.freeze({ width:413,height:531,physicalHeightMm:45,headLengthMm:28,topMarginMm:4,shoulderExpandRatio:1,jpegQuality:.99 }),
+  '35x45': Object.freeze({ width:413,height:531,physicalHeightMm:45,headLengthMm:28.5,topMarginMm:3,shoulderExpandRatio:1,jpegQuality:.99 }),
   '2x2': Object.freeze({ width:600,height:600,physicalHeightMm:50.8,headLengthMm:28,topMarginMm:5,shoulderExpandRatio:1,jpegQuality:.99 }),
   // Korean 3 × 4cm half-name-card portrait: the face occupies about one
   // third of the full photo height so considerably more upper body remains.
-  '30x40': Object.freeze({ width:354,height:472,physicalHeightMm:40,headLengthMm:13.3,topMarginMm:4,shoulderExpandRatio:1,jpegQuality:.99 }),
-  '20x30': Object.freeze({ width:236,height:354,physicalHeightMm:30,headLengthMm:22,topMarginMm:3,shoulderExpandRatio:1,jpegQuality:.99 }),
-  '40x60': Object.freeze({ width:472,height:709,physicalHeightMm:60,headLengthMm:34,topMarginMm:5,shoulderExpandRatio:1,jpegQuality:.99 }),
-  '50x70': Object.freeze({width:591,height:827,physicalHeightMm:70,headLengthMm:34,topMarginMm:5,shoulderExpandRatio:1,jpegQuality:.99}),
+  '30x40': Object.freeze({ width:709,height:945,physicalHeightMm:40,headLengthMm:20,topMarginMm:4,shoulderExpandRatio:1,jpegQuality:.99 }),
+  '20x30': Object.freeze({ width:600,height:900,physicalHeightMm:30,headLengthMm:18,topMarginMm:2.5,shoulderExpandRatio:1,jpegQuality:.99 }),
+  '40x60': Object.freeze({ width:472,height:709,physicalHeightMm:60,headLengthMm:28,topMarginMm:5,shoulderExpandRatio:1,jpegQuality:.99 }),
+  '50x70': Object.freeze({width:591,height:827,physicalHeightMm:70,headLengthMm:33,topMarginMm:5,shoulderExpandRatio:1,jpegQuality:.99}),
 });
 
 function getProfessionalPhotoSpec(format) {
@@ -240,6 +240,9 @@ function expandProfessionalShoulders({
   const outputContext =
     result.context;
 
+outputContext.imageSmoothingEnabled = true;
+outputContext.imageSmoothingQuality = 'high';
+
   const safeStartY =
     Math.max(
       0,
@@ -271,88 +274,94 @@ function expandProfessionalShoulders({
    * 어깨 확장이 자연스럽게 시작되도록
    * 약 9% 높이를 전환 구간으로 사용한다.
    */
-  const featherHeight =
-    Math.max(
-      36,
-      Math.round(
-        height * 0.09
+ const featherHeight =
+  Math.max(
+    48,
+    Math.round(height * 0.12)
+  );
+
+/*
+ * High-quality canvas resampling.
+ */
+outputContext.imageSmoothingEnabled = true;
+outputContext.imageSmoothingQuality = 'high';
+
+/*
+ * 1px strip을 사용한다.
+ *
+ * 4px strip을 확대해서 다시 그리면
+ * 특히 고해상도 원본에서 경계와 의상 디테일이
+ * 뭉개질 수 있으므로 1px 단위로 처리한다.
+ */
+const stripHeight = 1;
+
+for (
+  let y = safeStartY;
+  y < height;
+  y += stripHeight
+) {
+  const currentStripHeight =
+    Math.min(
+      stripHeight,
+      height - y
+    );
+
+  const progress =
+    Math.min(
+      1,
+      Math.max(
+        0,
+        (
+          y -
+          safeStartY
+        ) /
+        featherHeight
       )
     );
 
-  const stripHeight = 4;
-
-  for (
-    let y = safeStartY;
-    y < height;
-    y += stripHeight
-  ) {
-    const currentStripHeight =
-      Math.min(
-        stripHeight,
-        height - y
-      );
-
-    const progress =
-      Math.min(
-        1,
-        Math.max(
-          0,
-          (
-            y -
-            safeStartY
-          ) /
-          featherHeight
-        )
-      );
-
-    /*
-     * 부드러운 곡선으로 1.0에서
-     * 목표 어깨 확장 비율까지 증가한다.
-     */
-    const smoothProgress =
-      progress *
-      progress *
-      (
-        3 -
-        2 * progress
-      );
-
-    const currentRatio =
-      1 +
-      (
-        expandRatio - 1
-      ) *
-      smoothProgress;
-
-    const sourceWidth =
-      width /
-      currentRatio;
-
-    const sourceX =
-      (
-        width -
-        sourceWidth
-      ) /
-      2;
-
-    outputContext.drawImage(
-      sourceCanvas,
-
-      sourceX,
-      y,
-      sourceWidth,
-      currentStripHeight,
-
-      0,
-      y,
-      width,
-      currentStripHeight
+  const smoothProgress =
+    progress *
+    progress *
+    (
+      3 -
+      2 * progress
     );
-  }
 
-  return outputCanvas;
+  const currentRatio =
+    1 +
+    (
+      expandRatio - 1
+    ) *
+    smoothProgress;
+
+  const sourceWidth =
+    width /
+    currentRatio;
+
+  const sourceX =
+    (
+      width -
+      sourceWidth
+    ) /
+    2;
+
+  outputContext.drawImage(
+    sourceCanvas,
+
+    sourceX,
+    y,
+    sourceWidth,
+    currentStripHeight,
+
+    0,
+    y,
+    width,
+    currentStripHeight
+  );
 }
 
+return outputCanvas;
+}
 /*
  * sourceInput:
  * HTMLImageElement, Canvas 또는 이미지 URL
@@ -453,6 +462,21 @@ async function createProfessionalPhotoLayout({
       spec
     );
 
+/*
+ * MediaPipe crownY는 실제 머리카락 최상단보다
+ * 아래쪽에서 검출되는 경향이 있다.
+ *
+ * 검출된 머리 길이의 12.5%를 실제 crown 위쪽으로
+ * 보정하여 최종 사진의 실제 머리 위 여백을 확보한다.
+ */
+const crownCorrectionPx =
+  currentHeadPx * 0.125;
+
+const correctedTopMarginPx =
+  topMarginPx +
+  crownCorrectionPx * scale;
+
+
   const aligned =
     createWhiteCanvas(
       spec.width,
@@ -465,16 +489,19 @@ async function createProfessionalPhotoLayout({
   const alignedContext =
     aligned.context;
 
+  alignedContext.imageSmoothingEnabled = true;
+  alignedContext.imageSmoothingQuality = 'high';
+
   /*
    * 정수리를 지정된 상단 여백 위치에 놓고
    * 얼굴 중심을 사진 가로 중앙에 맞춘다.
    */
   alignedContext.save();
 
-  alignedContext.translate(
-    spec.width / 2,
-    topMarginPx
-  );
+ alignedContext.translate(
+  spec.width / 2,
+  correctedTopMarginPx
+);
 
   alignedContext.rotate(
     -numericTilt
@@ -499,11 +526,13 @@ async function createProfessionalPhotoLayout({
    * 턱보다 약간 아래에서 어깨 확장을 시작한다.
    */
   const shoulderStartY =
-    topMarginPx +
-    targetHeadPx *
-      1.07;
+  topMarginPx +
+  targetHeadPx *
+    1.07;
 
-  const finalCanvas =
+
+
+const finalCanvas =
   spec.shoulderExpandRatio > 1.001
     ? expandProfessionalShoulders({
         sourceCanvas:
@@ -516,10 +545,10 @@ async function createProfessionalPhotoLayout({
       })
     : alignedCanvas;
 
-  return finalCanvas.toDataURL(
-    'image/jpeg',
-    spec.jpegQuality
-  );
+return finalCanvas.toDataURL(
+  'image/jpeg',
+  spec.jpegQuality
+);
 }
 
 /*
