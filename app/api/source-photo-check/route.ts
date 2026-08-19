@@ -204,18 +204,38 @@ function normalize(value: unknown): SourceResult {
     PHOTO_OF_PHOTO_DECISIVE_EVIDENCE.includes(evidence)
   );
 
+/*
+ * SCREEN_CAPTURE 안전장치
+ *
+ * CURSOR_OR_STATUS_BAR_VISIBLE은 얼굴/헤어/배경의 작은 형태를
+ * UI 요소로 오인할 가능성이 있으므로 이것 하나만으로는
+ * SCREEN_CAPTURE를 확정하지 않습니다.
+ *
+ * 반면 실제 브라우저 UI, 기기 베젤, 모아레/픽셀 그리드,
+ * 디스플레이 반사/경계는 단독으로도 직접적인 화면 증거로 봅니다.
+ */
+const hasDecisiveScreenEvidence =
+  rawSource !== "SCREEN_CAPTURE" ||
+  matchingEvidence.some(
+    (evidence) =>
+      evidence === "DEVICE_BEZEL_VISIBLE" ||
+      evidence === "APP_OR_BROWSER_UI_VISIBLE" ||
+      evidence === "SCREEN_PIXEL_GRID_OR_MOIRE" ||
+      evidence === "DISPLAY_REFLECTION_OR_DISPLAY_EDGE"
+  );
+
 if (
   confidence < STRONG_SOURCE_CONFIDENCE ||
   matchingEvidence.length === 0 ||
-  !hasDecisivePhotoOfPhotoEvidence
+  !hasDecisivePhotoOfPhotoEvidence ||
+  !hasDecisiveScreenEvidence
 ) {
   return {
     source: "UNCERTAIN",
     confidence,
-    visibleEvidence,
+    visibleEvidence: [],
   };
 }
-
   return {
     source: rawSource,
     confidence,

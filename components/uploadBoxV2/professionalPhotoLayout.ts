@@ -8,7 +8,7 @@ const PROFESSIONAL_PHOTO_SPECS = Object.freeze({
     physicalHeightMm: 50.8,
 
     // 정수리부터 턱까지 2.8cm
-    headLengthMm: 24.5,
+    headLengthMm: 28,
 
     /*
  * crownY 검출점이 실제 머리카락 최상단보다 아래로 잡히는 오차 보정.
@@ -52,8 +52,8 @@ const PROFESSIONAL_PHOTO_SPECS = Object.freeze({
 
   jpegQuality: 0.99,
 }),
-  '35x45': Object.freeze({ width:413,height:531,physicalHeightMm:45,headLengthMm:28.5,topMarginMm:3,shoulderExpandRatio:1,jpegQuality:.99 }),
-  '2x2': Object.freeze({ width:600,height:600,physicalHeightMm:50.8,headLengthMm:28,topMarginMm:5,shoulderExpandRatio:1,jpegQuality:.99 }),
+'35x45': Object.freeze({ width:413,height:531,physicalHeightMm:45,headLengthMm:33,topMarginMm:3,shoulderExpandRatio:1,jpegQuality:.99 }),
+'2x2': Object.freeze({ width:600,height:600,physicalHeightMm:50.8,headLengthMm:28,topMarginMm:5,shoulderExpandRatio:1,jpegQuality:.99 }),
   // Korean 3 × 4cm half-name-card portrait: the face occupies about one
   // third of the full photo height so considerably more upper body remains.
   '30x40': Object.freeze({ width:709,height:945,physicalHeightMm:40,headLengthMm:20,topMarginMm:4,shoulderExpandRatio:1,jpegQuality:.99 }),
@@ -207,6 +207,110 @@ function createWhiteCanvas(
     canvas,
     context,
   };
+}
+
+function fillProfessionalBottomGap({
+  sourceCanvas,
+  sourceBottomY,
+}) {
+  const width =
+    sourceCanvas.width;
+
+  const height =
+    sourceCanvas.height;
+
+  const safeBottomY =
+    Math.max(
+      1,
+      Math.min(
+        height,
+        Math.round(sourceBottomY)
+      )
+    );
+
+  if (safeBottomY >= height) {
+    return sourceCanvas;
+  }
+
+  const gapHeight =
+    height - safeBottomY;
+
+  /*
+   * 하단이 부족한 경우 얼굴/머리는 건드리지 않고
+   * 마지막 상체 영역만 아래 방향으로 연장한다.
+   */
+  const sampleHeight =
+    Math.max(
+      40,
+      Math.min(
+        safeBottomY,
+        Math.round(
+          Math.max(
+            gapHeight * 1.5,
+            height * 0.12
+          )
+        )
+      )
+    );
+
+  const sampleY =
+    Math.max(
+      0,
+      safeBottomY - sampleHeight
+    );
+
+  const context =
+    sourceCanvas.getContext('2d');
+
+  if (!context) {
+    throw new Error(
+      'Professional bottom-fill canvas context unavailable.'
+    );
+  }
+
+  const sampleCanvas =
+    document.createElement('canvas');
+
+  sampleCanvas.width = width;
+  sampleCanvas.height = sampleHeight;
+
+  const sampleContext =
+    sampleCanvas.getContext('2d');
+
+  if (!sampleContext) {
+    throw new Error(
+      'Professional bottom-fill sample context unavailable.'
+    );
+  }
+
+  sampleContext.drawImage(
+    sourceCanvas,
+    0,
+    sampleY,
+    width,
+    sampleHeight,
+    0,
+    0,
+    width,
+    sampleHeight
+  );
+
+  context.imageSmoothingEnabled = true;
+  context.imageSmoothingQuality = 'high';
+
+  context.drawImage(
+    sampleCanvas,
+    0,
+    0,
+    width,
+    sampleHeight,
+    0,
+    sampleY,
+    width,
+    height - sampleY
+  );
+
+  return sourceCanvas;
 }
 
 /*
@@ -435,46 +539,60 @@ async function createProfessionalPhotoLayout({
     );
   }
 
-  const currentHeadPx =
-    numericChinY -
-    numericCrownY;
-
-  const targetHeadPx =
-    calculateProfessionalTargetHeadPx(
-      spec
-    );
-
   /*
-   * 미국:
-   * 600 × 28 ÷ 50.8
-   * 약 330.7px
-   *
-   * 국제:
-   * 1350 × 32 ÷ 45
-   * 960px
-   */
- const scale =
+ * FaceMesh가 제공하는 crownY는 실제 머리카락의
+ * 최상단보다 아래쪽에서 검출될 수 있다.
+ *
+ * 따라서 먼저 검출된 crown→chin 길이를 구하고,
+ * 그 길이의 12.5%를 crown 위쪽으로 보정한다.
+ */
+/*
+ * crownY / chinY는 measureProfessionalFaceGeometry()
+ * 단계에서 최종 레이아웃 좌표로 확정되어 전달된다.
+ *
+ * 여기서는 crown을 다시 추정하거나 보정하지 않는다.
+ * 동일한 crown/chin 기준으로 실제 출력 scale만 계산한다.
+ */
+const correctedCrownY =
+  numericCrownY;
+
+const currentHeadPx =
+  numericChinY -
+  numericCrownY;
+
+const targetHeadPx =
+  calculateProfessionalTargetHeadPx(
+    spec
+  );
+
+const scale =
   targetHeadPx /
   currentHeadPx;
 
-  const topMarginPx =
-    calculateProfessionalTopMarginPx(
-      spec
-    );
-
-/*
- * MediaPipe crownY는 실제 머리카락 최상단보다
- * 아래쪽에서 검출되는 경향이 있다.
- *
- * 검출된 머리 길이의 12.5%를 실제 crown 위쪽으로
- * 보정하여 최종 사진의 실제 머리 위 여백을 확보한다.
- */
-const crownCorrectionPx =
-  currentHeadPx * 0.125;
+const topMarginPx =
+  calculateProfessionalTopMarginPx(
+    spec
+  );
 
 const correctedTopMarginPx =
-  topMarginPx +
-  crownCorrectionPx * scale;
+  topMarginPx;
+  const sourceFaceCenterY =
+  (numericCrownY + numericChinY) / 2;
+
+const targetFaceCenterY =
+  correctedTopMarginPx +
+  (sourceFaceCenterY - numericCrownY) * scale;
+
+if (
+  !Number.isFinite(currentHeadPx) ||
+  currentHeadPx <= 0
+) {
+  throw new Error(
+    'Professional corrected head length is invalid.'
+  );
+}
+
+
 
 
   const aligned =
@@ -500,25 +618,57 @@ const correctedTopMarginPx =
 
  alignedContext.translate(
   spec.width / 2,
-  correctedTopMarginPx
+  targetFaceCenterY
 );
 
-  alignedContext.rotate(
-    -numericTilt
-  );
+alignedContext.rotate(
+  -numericTilt
+);
 
-  alignedContext.scale(
-    scale,
-    scale
-  );
+alignedContext.scale(
+  scale,
+  scale
+);
 
-  alignedContext.drawImage(
-    sourceImage,
-    -numericFaceCenterX,
-    -numericCrownY
-  );
+alignedContext.drawImage(
+  sourceImage,
+  -numericFaceCenterX,
+  -sourceFaceCenterY
+);
 
   alignedContext.restore();
+/*
+ * 현재 scale / translate가 적용된 뒤
+ * 원본 이미지의 실제 하단이 최종 캔버스의
+ * 어느 위치까지 도달하는지 계산한다.
+ */
+const alignedSourceBottomY =
+  correctedTopMarginPx +
+  (
+    sourceImage.naturalHeight -
+    numericCrownY
+  ) *
+  scale;
+
+/*
+ * 4x6 / 5x7처럼 세로가 긴 출력에서
+ * E.R.U master의 상체가 캔버스 하단까지
+ * 도달하지 못하면 남는 흰 영역만 채운다.
+ *
+ * 얼굴, 머리, 목 위치에는 영향을 주지 않는다.
+ */
+if (
+  format === '40x60' ||
+  format === '50x70'
+) {
+  fillProfessionalBottomGap({
+    sourceCanvas:
+      alignedCanvas,
+
+    sourceBottomY:
+      alignedSourceBottomY,
+  });
+}
 
   /*
    * 턱 바로 아래부터 확장하면

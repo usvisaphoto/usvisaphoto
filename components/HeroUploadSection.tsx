@@ -81,7 +81,7 @@ return (
           <h1 className="mt-7 max-w-4xl text-4xl font-black leading-[1.02] tracking-[-.04em] sm:text-6xl xl:text-7xl">{profile.heading}</h1>
           <p className="mt-7 max-w-2xl text-lg leading-8 text-white/85 sm:text-xl">{profile.description}</p>
 
-          <a href="#upload-card" className="mt-8 flex min-h-14 max-w-xl items-center justify-center rounded-2xl bg-cyan-300 px-8 text-lg font-black text-blue-950 shadow-[0_18px_45px_rgba(34,211,238,.25)] transition hover:-translate-y-0.5 hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-cyan-200">Create My Visa Photo</a>
+          <a href="#upload-card" className="mt-8 flex min-h-14 max-w-xl items-center justify-center rounded-2xl bg-cyan-300 px-8 text-lg font-black text-blue-950 shadow-[0_18px_45px_rgba(34,211,238,.25)] transition hover:-translate-y-0.5 hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-cyan-200">Create My Visa/Passport Photo</a>
           <p className="mt-3 text-sm text-blue-200">Secure Preview · Pay After Validation · <strong className="text-white">We Stand Behind Every Photo</strong></p>
           <div className="mt-4 inline-flex items-center gap-2 rounded-xl border border-amber-300/30 bg-amber-300/10 px-4 py-2 text-sm font-bold text-amber-100"><span>Grand Opening</span><span className="opacity-60 line-through">$14.99</span><strong className="text-white">$9.99</strong></div>
 

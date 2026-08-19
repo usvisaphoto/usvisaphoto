@@ -50,6 +50,7 @@ const ctx = canvas.getContext('2d');
 const PENDING_PAYMENT_KEY = 'usvisa_pending_payment';
 const ACTIVE_PAYMENT_RETURN_KEY = 'usvisa_active_payment_return';
 const CONFIRMED_PAYMENT_PREFIX = 'usvisa_confirmed_payment:';
+const PROFESSIONAL_ENTITLEMENT_PREFIX = 'usvisa_professional_entitlement:';
 const AUTO_DOWNLOAD_PREFIX = 'usvisa_auto_downloaded:';
 const PENDING_PAYMENT_TTL_MS = 2 * 60 * 60 * 1000;
 const MAX_PAID_DOWNLOADS = 5;
@@ -1512,12 +1513,22 @@ function getSecurePhotoTokens(product) {
   const professionalExtraPhotos =
     readStoredProfessionalExtraPhotos();
 
-  const professionalExtraTokens =
-    professionalExtraPhotos.map(
-      function(item) {
-        return item.token;
-      }
-    );
+  const selectedProfessionalExtraSizes =
+  getSelectedProfessionalExtraSizes();
+
+const professionalExtraTokens =
+  professionalExtraPhotos
+    .filter(function(item) {
+      return (
+        item &&
+        selectedProfessionalExtraSizes.includes(
+          item.sizeKey
+        )
+      );
+    })
+    .map(function(item) {
+      return item.token;
+    });
 
   if (product === 'basic') {
     return [
@@ -1759,6 +1770,20 @@ function getCurrentPaidReturnState() {
   return null;
 }
 
+function getCurrentConfirmedPaymentState() {
+  const paymentReturn =
+    getCurrentPaidReturnState();
+
+  if (!paymentReturn) {
+    return null;
+  }
+
+  return getConfirmedPaymentState(
+    paymentReturn.orderId,
+    paymentReturn.product
+  );
+}
+
 function getCurrentPaidDownloadKey() {
   const paymentReturn = getCurrentPaidReturnState();
 
@@ -1898,11 +1923,14 @@ function saveConfirmedPaymentState(paymentState) {
   window.parent.localStorage.setItem(
     key,
     JSON.stringify({
-      orderId: paymentState.orderId,
-      product: paymentState.product,
-      fingerprint: paymentState.fingerprint,
-      confirmedAt: Date.now()
-    })
+  orderId: paymentState.orderId,
+  product: paymentState.product,
+  fingerprint: paymentState.fingerprint,
+  extraSizeKeys: Array.isArray(paymentState.extraSizeKeys)
+    ? paymentState.extraSizeKeys.slice()
+    : [],
+  confirmedAt: Date.now()
+})
   );
 
   return true;
@@ -1971,7 +1999,7 @@ function getOrderIdFromCheckoutUrl(checkoutUrl) {
   }
 }
 
-function rememberPendingPayment(product, checkoutUrl) {
+function rememberPendingPayment(product, checkoutUrl, extraSizeKeys = []) {
   const orderId = getOrderIdFromCheckoutUrl(checkoutUrl);
 
   if (!orderId || !isDownloadProduct(product)) {
@@ -1990,15 +2018,17 @@ function rememberPendingPayment(product, checkoutUrl) {
   }
 
   window.parent.localStorage.setItem(
-    PENDING_PAYMENT_KEY,
-    JSON.stringify({
-      orderId: orderId,
-      product: product,
-      fingerprint: fingerprint,
-      createdAt: Date.now()
-    })
-  );
-
+  PENDING_PAYMENT_KEY,
+  JSON.stringify({
+    orderId: orderId,
+    product: product,
+    fingerprint: fingerprint,
+    extraSizeKeys: Array.isArray(extraSizeKeys)
+      ? extraSizeKeys.slice()
+      : [],
+    createdAt: Date.now()
+  })
+);
   return true;
 }
 
@@ -2194,8 +2224,25 @@ case 'professional': {
 }
 
 case 'professional-international': {
+  const confirmedPayment =
+    getCurrentConfirmedPaymentState();
+
+  const purchasedExtraSizeKeys =
+    confirmedPayment &&
+    Array.isArray(confirmedPayment.extraSizeKeys)
+      ? confirmedPayment.extraSizeKeys
+      : [];
+
   const extraPhotos =
-    readStoredProfessionalExtraPhotos();
+    readStoredProfessionalExtraPhotos()
+      .filter(function(item) {
+        return (
+          item &&
+          purchasedExtraSizeKeys.includes(
+            item.sizeKey
+          )
+        );
+      });
 
   const professionalFiles = [
     {
@@ -2645,6 +2692,8 @@ function resetForNewUpload() {
   window.usvisaLastValidationReport = null;
   window.usvisaLastValidationResult = null;
   setDetectButtonState('auto');
+  
+  detectBtn.style.display = '';
 
   showCreatePhotoButton();
   setCreateEnabled(false);
@@ -2997,16 +3046,58 @@ if (validation.failureReason === 'glassesReview') {
       return false;
     }
 
-    if (
+   if (
   validation.failureReason === 'upperBodyTight' ||
   validation.failureReason === 'professionalRecoverable' ||
   validation.failureReason === 'alreadyCropped'
 ) {
+  /*
+   * RECOVERABLE 사진도 E.R.U에서 사용할 수 있도록
+   * 현재 Auto Detect의 얼굴 측정값을 보존한다.
+   */
+  
+  lockedDetection = {
+    landmarks: lm,
+    iw,
+    ih,
+
+    imageWidth: iw,
+    imageHeight: ih,
+
+    faceTiltAngle,
+    
+    crownY: Number.isFinite(validation.layoutCrownY)
+      ? validation.layoutCrownY
+      : validation.estimatedCrownY,
+
+    chinY: validation.detectedChinY,
+
+    foreheadY: validation.foreheadY,
+    faceHeight: validation.faceHeight,
+  };
+
+  lockedDetectionFingerprint =
+    currentPhotoFingerprint || '';
+
+  photoValidationPassed = false;
+  autoDetectLocked = true;
+
+  window.usvisaRecoverable = true;
+
+  const recoverableMessage =
+    'This photo needs more composition space for standard preparation.<br><br>' +
+    'Professional Retouch can extend the clothing and shoulder area automatically.';
+
+  saveAutoDetectRecoverable(
+    currentPhotoFingerprint,
+    lockedDetection,
+    recoverableMessage
+  );
+
   setDetectButtonState('warning');
 
   showValidationRecoverable(
-    'This photo needs more composition space for standard preparation.<br><br>' +
-    'Professional Retouch can extend the clothing and shoulder area automatically.'
+    recoverableMessage
   );
 
   return false;
@@ -3809,26 +3900,11 @@ function drawFinalPhoto(sourceImg) {
   }
 
   const currentHeadPx = Math.max(1, chinY - crownY);
-const headScaleCalibration =
-  format === 'us' ||
-  format === '2x2' ||
-  (
-    format === 'country-default' &&
-    String(
-      window.EMBASSY_PHOTO_PROFILE?.code || ''
-    ).toUpperCase() === 'US'
-  )
-    ? 0.765625
-    : (
-        format === 'international' ||
-        format === '35x45'
-      )
-      ? (32 / 37)
-      : 1;
+const headScaleCalibration = 0.765625;
 
 const scale =
   (
-    targetHeadPx /
+    TARGET_HEAD_PX /
     currentHeadPx
   ) *
   headScaleCalibration;
@@ -4071,7 +4147,174 @@ const faceHeightLabel = COUNTRY_CODE === 'US'
   octx.setLineDash([]);
 
 }
- 
+ async function createEruFiveBySevenMaster(file) {
+  if (!file) {
+    throw new Error(
+      'Original E.R.U source file is unavailable.'
+    );
+  }
+
+  const objectUrl =
+    URL.createObjectURL(file);
+
+  try {
+    const image =
+      await new Promise(function(resolve, reject) {
+        const img = new Image();
+
+        img.onload = function() {
+          resolve(img);
+        };
+
+        img.onerror = function() {
+          reject(
+            new Error(
+              'Original E.R.U source image could not be decoded.'
+            )
+          );
+        };
+
+        img.src = objectUrl;
+      });
+
+    const sourceWidth =
+      image.naturalWidth || image.width;
+
+    const sourceHeight =
+      image.naturalHeight || image.height;
+
+    if (
+      !sourceWidth ||
+      !sourceHeight
+    ) {
+      throw new Error(
+        'Original E.R.U source dimensions are invalid.'
+      );
+    }
+
+    /*
+     * E.R.U UNIVERSAL MASTER
+     *
+     * Physical working ratio: 5 x 7 cm
+     * Pixel working canvas: 1000 x 1400
+     *
+     * IMPORTANT:
+     * - Never crop the original photograph.
+     * - Never enlarge the face merely to fill the canvas.
+     * - Preserve every available original pixel.
+     * - Missing lower/side areas remain white and are
+     *   reconstructed by the E.R.U image-edit stage.
+     */
+    const masterWidth = 1000;
+    const masterHeight = 1400;
+
+    const canvas =
+      document.createElement('canvas');
+
+    canvas.width = masterWidth;
+    canvas.height = masterHeight;
+
+    const context =
+      canvas.getContext('2d');
+
+    if (!context) {
+      throw new Error(
+        'E.R.U 5x7 master canvas is unavailable.'
+      );
+    }
+
+    context.fillStyle = '#FFFFFF';
+
+    context.fillRect(
+      0,
+      0,
+      masterWidth,
+      masterHeight
+    );
+
+    /*
+     * Fit the ENTIRE source inside the 5:7 master.
+     * No cropping.
+     */
+    const scale =
+      Math.min(
+        masterWidth / sourceWidth,
+        masterHeight / sourceHeight,
+        1
+      );
+
+    const drawWidth =
+      sourceWidth * scale;
+
+    const drawHeight =
+      sourceHeight * scale;
+
+    /*
+     * Center horizontally.
+     *
+     * Keep the original photograph toward the top so
+     * additional working space is preferentially created
+     * underneath the subject for shoulders / upper torso.
+     */
+    const drawX =
+      (masterWidth - drawWidth) / 2;
+
+    const drawY = 0;
+
+    context.drawImage(
+      image,
+      drawX,
+      drawY,
+      drawWidth,
+      drawHeight
+    );
+
+    const masterBlob =
+      await new Promise(function(resolve, reject) {
+        canvas.toBlob(
+          function(blob) {
+            if (!blob) {
+              reject(
+                new Error(
+                  'E.R.U 5x7 master could not be encoded.'
+                )
+              );
+
+              return;
+            }
+
+            resolve(blob);
+          },
+          'image/png',
+          1
+        );
+      });
+
+    console.log('ERU_5X7_MASTER_QA', {
+      sourceWidth,
+      sourceHeight,
+      masterWidth,
+      masterHeight,
+      drawWidth,
+      drawHeight,
+      drawX,
+      drawY,
+      addedBottomSpace:
+        masterHeight -
+        (drawY + drawHeight),
+    });
+
+    return new File(
+      [masterBlob],
+      'eru-5x7-master.png',
+      {
+        type: 'image/png',
+      }
+    );
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
 async function measureProfessionalFaceGeometry(sourceInput) {
   let sourceImage = sourceInput;
 
@@ -4137,14 +4380,23 @@ async function measureProfessionalFaceGeometry(sourceInput) {
   );
 
   // 기존 Auto Detect와 동일하게 warm-up 후 실제 측정
- await runFaceMeshOnce(canvas);
+if (
+  typeof window.runFaceMeshOnce !== 'function'
+) {
+  throw new Error(
+    'FaceMesh measurement engine is unavailable.'
+  );
+}
 
-  await new Promise(function(resolve) {
-    setTimeout(resolve, 150);
-  });
+// 기존 Auto Detect와 동일하게 warm-up 후 실제 측정
+await window.runFaceMeshOnce(canvas);
 
-  const detected =
-  await runFaceMeshOnce(canvas);
+await new Promise(function(resolve) {
+  setTimeout(resolve, 150);
+});
+
+const detected =
+  await window.runFaceMeshOnce(canvas);
 
   if (
     !detected ||
@@ -4617,6 +4869,94 @@ async function createCountryProfessionalPhotoFromAi(
     faceTiltAngle: geometry.faceTiltAngle,
   });
 }
+async function createProfessionalExtraPhotosFromStoredMaster(
+  requestedSizes
+) {
+  const master =
+    readStoredPhoto(
+      'usvisa_pending_professional_master'
+    );
+
+  if (!master) {
+    throw new Error(
+      'Saved E.R.U master is unavailable.'
+    );
+  }
+
+  const sizeKeys =
+    Array.from(
+      new Set(
+        (requestedSizes || [])
+          .map(function(sizeKey) {
+            return String(sizeKey || '');
+          })
+          .filter(Boolean)
+      )
+    );
+
+  const securedPhotos = [];
+
+  for (const sizeKey of sizeKeys) {
+    const extraPhoto =
+      await createProfessionalExtraPhotoFromAi(
+        master,
+        sizeKey
+      );
+
+    if (!extraPhoto) {
+      continue;
+    }
+
+    const securedExtra =
+      await protectPhotoForCheckout(
+        extraPhoto
+      );
+
+    if (
+      !securedExtra ||
+      !isSecurePhotoToken(
+        securedExtra.token
+      )
+    ) {
+      throw new Error(
+        'Could not protect additional E.R.U photo: ' +
+        sizeKey
+      );
+    }
+
+    securedPhotos.push({
+      sizeKey: sizeKey,
+      token: securedExtra.token,
+    });
+  }
+
+  writeStoredPhoto(
+    'usvisa_secure_professional_extra_photos',
+    JSON.stringify(securedPhotos)
+  );
+
+  const firstExtra =
+    securedPhotos.length
+      ? securedPhotos[0]
+      : null;
+
+  writeStoredPhoto(
+    'usvisa_secure_professional_extra_photo',
+    firstExtra
+      ? firstExtra.token
+      : ''
+  );
+
+  writeStoredPhoto(
+    'usvisa_pending_professional_extra_size_key',
+    firstExtra
+      ? firstExtra.sizeKey
+      : ''
+  );
+
+  return securedPhotos;
+}
+
 let createPhotoBusy = false;
 
 if (eruScrollBtn) {
@@ -5150,7 +5490,8 @@ if (!uploadedFile) {
   );
 }
 
-const professionalBlob = uploadedFile;
+const professionalBlob =
+  await createEruFiveBySevenMaster(uploadedFile);
 
 console.log('Recoverable:', recoverable);
 
@@ -5207,7 +5548,10 @@ formData.append('countryCode', COUNTRY_CODE);
 
 const eyebrowClearanceRequired =
   COUNTRY_CODE === 'KR' ||
-  (COUNTRY_CODE === 'US' && getSelectedProfessionalExtraSize() === '35x45');
+  (
+    COUNTRY_CODE === 'US' &&
+    getSelectedProfessionalExtraSizes().includes('35x45')
+  );
 formData.append('eyebrowClearanceRequired', eyebrowClearanceRequired ? 'true' : 'false');
 const removeEyewearRequired =
   GLASSES_RULE_ENABLED &&
@@ -5223,21 +5567,19 @@ console.log('E.R.U EYEWEAR REMOVAL:', {
   usvisaEyewearDetected: window.usvisaEyewearDetected,
   removeEyewearRequired
 });
-const shoulderRecoveryRequired =
- recoverable || Boolean(
-    lockedDetection &&
-    (
-      lockedDetection.recoverable === true ||
-      lockedDetection.shoulderLikelyCropped === true ||
-      lockedDetection.upperBodyTooClose === true ||
-      lockedDetection.compositionHardFail === true ||
-      lockedDetection.failureReason === 'SHOULDERS_CROPPED'
-    )
-  );
+/*
+ * E.R.U UNIVERSAL BODY RECOVERY
+ *
+ * Every E.R.U image is first prepared as a 5x7 master.
+ * The OpenAI stage must therefore complete the usable
+ * shoulder / upper-body area before any destination-size
+ * crop is generated.
+ */
+const shoulderRecoveryRequired = true;
 
 formData.append(
   'shoulderRecoveryRequired',
-  shoulderRecoveryRequired ? 'true' : 'false'
+  'true'
 );
 
 console.log('E.R.U SHOULDER RECOVERY:', {
@@ -5266,6 +5608,10 @@ if (!res.ok) {
 if (!data.professionalPreview) {
   throw new Error('Professional preview image was not returned.');
 }
+writeStoredPhoto(
+  'usvisa_pending_professional_master',
+  data.professionalPreview
+);
 
 const countryProfessionalPhoto =
   await createCountryProfessionalPhotoFromAi(data.professionalPreview);
@@ -5482,24 +5828,17 @@ if (downloadBtn) {
 }
   
  if (premiumCreateBtn) {
-  if (isLocalAdminEnvironment() && localEruFinalJpg) {
-    // LOCAL TEST:
-    // E.R.U generation is complete, so do not show checkout.
-    premiumCreateBtn.style.display = 'none';
-    premiumCreateBtn.disabled = true;
-  } else {
-    const withInternational =
-      professionalInternationalCheckbox &&
-      professionalInternationalCheckbox.checked;
+  const withInternational =
+    professionalInternationalCheckbox &&
+    professionalInternationalCheckbox.checked;
 
-    premiumCreateBtn.style.display = 'block';
-    premiumCreateBtn.disabled = false;
+  premiumCreateBtn.style.display = 'block';
+  premiumCreateBtn.disabled = false;
 
-    premiumCreateBtn.textContent =
-      withInternational
-        ? '🔐 Unlock Embassy-Ready Photos · $12.99'
-        : '🔐 Unlock Embassy-Ready Photo · $9.99';
-  }
+  premiumCreateBtn.textContent =
+    withInternational
+      ? '🔐 Unlock Embassy-Ready Photos · $12.99'
+      : '🔐 Unlock Embassy-Ready Photo · $9.99';
 }
 
 if (expertCard && professionalCard) {
@@ -5563,7 +5902,10 @@ premiumCreateBtn?.addEventListener('click', async function () {
   const checkoutProduct = withInternational
     ? 'professional-international'
     : 'professional';
-
+const checkoutExtraSizeKeys =
+  withInternational
+    ? getSelectedProfessionalExtraSizes()
+    : [];
   if (
     !savedProfessionalPhoto ||
     !isStoredProfessionalForCurrentPhoto()
@@ -5576,16 +5918,77 @@ premiumCreateBtn?.addEventListener('click', async function () {
   }
 
  
-  if (
-    withInternational &&
-    (!isSecurePhotoToken(readStoredPhoto('usvisa_secure_professional_extra_photo')) || readStoredPhoto('usvisa_pending_professional_extra_size_key') !== getSelectedProfessionalExtraSize())
-  ) {
-    statusEl.textContent =
-      'The selected extra size changed. Create the E.R.U preview again before checkout.';
-    premiumCreateBtn.disabled = false;
-    updateProfessionalPackageButton();
-    return;
+  if (withInternational) {
+  const selectedExtraSizes =
+    getSelectedProfessionalExtraSizes();
+
+  let storedExtraPhotos = [];
+
+  try {
+    const storedExtraPhotosRaw =
+      readStoredPhoto(
+        'usvisa_secure_professional_extra_photos'
+      );
+
+    storedExtraPhotos =
+      storedExtraPhotosRaw
+        ? JSON.parse(storedExtraPhotosRaw)
+        : [];
+
+    if (!Array.isArray(storedExtraPhotos)) {
+      storedExtraPhotos = [];
+    }
+  } catch (error) {
+    storedExtraPhotos = [];
   }
+
+  const storedExtraSizeKeys =
+    storedExtraPhotos
+      .filter(function (item) {
+        return (
+          item &&
+          item.sizeKey &&
+          isSecurePhotoToken(item.token)
+        );
+      })
+      .map(function (item) {
+        return item.sizeKey;
+      });
+
+  const extraSizesChanged =
+    selectedExtraSizes.length !==
+      storedExtraSizeKeys.length ||
+    selectedExtraSizes.some(function (sizeKey) {
+      return !storedExtraSizeKeys.includes(sizeKey);
+    });
+
+  if (extraSizesChanged) {
+    statusEl.textContent =
+      'Preparing your selected photo sizes...';
+
+    premiumCreateBtn.disabled = true;
+    premiumCreateBtn.textContent =
+      'Preparing selected sizes...';
+
+    try {
+      await createProfessionalExtraPhotosFromStoredMaster();
+    } catch (error) {
+      console.error(
+        'E.R.U EXTRA SIZE GENERATION ERROR:',
+        error
+      );
+
+      statusEl.textContent =
+        error && error.message
+          ? String(error.message)
+          : 'Selected photo sizes could not be prepared. Please try again.';
+
+      premiumCreateBtn.disabled = false;
+      updateProfessionalPackageButton();
+      return;
+    }
+  }
+}
 
   premiumCreateBtn.disabled = true;
   premiumCreateBtn.textContent = 'Opening checkout...';
@@ -5597,12 +6000,13 @@ premiumCreateBtn?.addEventListener('click', async function () {
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
-        product: withInternational
-          ? 'professional-international'
-          : 'professional',
-        securePhotoTokens: getSecurePhotoTokens(checkoutProduct)
-      })
+     body: JSON.stringify({
+  product: checkoutProduct,
+  securePhotoTokens: getSecurePhotoTokens(checkoutProduct),
+  extraSizeKeys: withInternational
+    ? getSelectedProfessionalExtraSizes()
+    : []
+})
     });
 
     const data = await response.json();
@@ -5611,7 +6015,11 @@ premiumCreateBtn?.addEventListener('click', async function () {
       throw new Error(data.error || 'No checkout URL');
     }
 
-    if (!rememberPendingPayment(checkoutProduct, data.url)) {
+    if (!rememberPendingPayment(
+  checkoutProduct,
+  data.url,
+  checkoutExtraSizeKeys
+)) {
       throw new Error('Checkout could not be linked to this photo.');
     }
 

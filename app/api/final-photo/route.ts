@@ -101,42 +101,45 @@ export async function POST(req: NextRequest) {
       .composite([{ input: whiteOverlay, blend: 'over' }])
       .toBuffer();
 
-    const output = await sharp(backgroundProtectedBuffer)
-      .resize(
-        targetWidth,
-        targetHeight,
-        {
-          /*
-           * 이미 규격 비율로 만들어진 캔버스를
-           * 그대로 출력 크기로 변환한다.
-           *
-           * cover, extract, top crop 사용 금지.
-           */
-          fit: 'fill',
-        }
-      )
-      /*
-       * Apply only a restrained output-size sharpen. Running it after resize
-       * restores a little edge clarity without changing skin tone, facial
-       * geometry, or introducing the crunchy halos of strong sharpening.
-       */
-      .sharpen({
-  sigma: 0.8,
-  m1: 0.8,
-  m2: 1.4,
-  x1: 2.0,
-  y2: 10,
-  y3: 20,
-})
-.jpeg({
-  quality: 98,
-  chromaSubsampling: '4:4:4',
-  mozjpeg: true,
-})
-.withMetadata({
-  density: 300,
-})
-      .toBuffer();
+    let finalPipeline =
+  sharp(backgroundProtectedBuffer);
+
+/*
+ * E.R.U layout engine에서 이미 정확한 최종 픽셀 규격으로
+ * 생성된 사진은 다시 resampling하지 않는다.
+ *
+ * 크기가 다른 경우에만 최종 규격으로 변환한다.
+ */
+if (
+  sourceWidth !== targetWidth ||
+  sourceHeight !== targetHeight
+) {
+  finalPipeline =
+    finalPipeline.resize(
+      targetWidth,
+      targetHeight,
+      {
+        fit: 'fill',
+        kernel: sharp.kernel.lanczos3,
+      }
+    );
+}
+
+const output =
+  await finalPipeline
+    /*
+     * 얼굴/피부 디테일을 인위적으로 다시 만들지 않는다.
+     * E.R.U master의 실제 디테일을 최대한 보존한다.
+     */
+    .jpeg({
+      quality: 100,
+      chromaSubsampling: '4:4:4',
+      mozjpeg: true,
+    })
+    .withMetadata({
+      density: 300,
+    })
+    .toBuffer();
 
     return new NextResponse(
       new Uint8Array(output),

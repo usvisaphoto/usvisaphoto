@@ -1,7 +1,7 @@
 export const uploadBoxStyles = String.raw`
 .eru-progress{margin-top:14px;padding:14px;border:1px solid #bfdbfe;border-radius:14px;background:#eff6ff;color:#1e3a8a}
 .eru-progress[hidden]{display:none}.eru-progress-copy{display:flex;justify-content:space-between;gap:12px;font-size:13px;font-weight:800}
-.eru-progress-track{height:9px;margin:10px 0;overflow:hidden;border-radius:999px;background:#dbeafe}.eru-progress-bar{width:0;height:100%;border-radius:inherit;background:linear-gradient(90deg,#2563eb,#06b6d4);transition:width .35s ease}
+.eru-progress-track{height:16px;margin:10px 0;overflow:hidden;border-radius:999px;background:#dbeafe}.eru-progress-bar{width:0;height:100%;border-radius:inherit;background:linear-gradient(90deg,#2563eb,#06b6d4);transition:width .35s ease}
 .eru-progress small{display:block;color:#475569;line-height:1.45}
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{width:100%;height:100%;background:#f8fafc;font-family:system-ui}
@@ -809,6 +809,7 @@ button{flex:1;border:0;border-radius:14px;padding:13px 10px;font-size:14px;font-
 }
 
 .eru-long-arrow{
+display:none;
   position:absolute;
 
   right:118px;

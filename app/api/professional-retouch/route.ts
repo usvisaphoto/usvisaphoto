@@ -141,24 +141,50 @@ KOREAN-STYLE EYEBROW CLEARANCE — REQUIRED
 ` : "") + 
 
 (shoulderRecoveryRequired ? `
-
 SHOULDER AND UPPER-BODY RECOVERY — REQUIRED
 
-- The source photo has been specifically classified as recoverable because the shoulder or upper-body composition is insufficient.
-- Shoulder and upper-body recovery is REQUIRED for this image. Do not return the image with the original tight or cropped shoulder composition unchanged.
-- Extend the visible clothing and shoulder area only as much as necessary to create a natural professional passport/visa portrait.
-- Reconstruct missing left and/or right shoulder areas using the visible anatomy, neckline, collar, garment structure, fabric texture, seams, folds, lighting, and opposite shoulder as references.
-- If one shoulder is pushed forward, rotated, raised, lowered, or visually dominant, gently correct the local shoulder and upper-torso posture.
-- Keep the face, head size, facial identity, neck anatomy, and natural body type unchanged.
-- Preserve the original clothing type, design, pattern, color, collar, texture, and fit unless a separate destination clothing-color rule explicitly requires recoloring.
-- Do not simply zoom the portrait out without reconstructing the missing shoulder/clothing area.
-- Do not shrink the face to create artificial space.
-- Do not move the whole person sideways merely to create room.
-- Do not mirror the opposite shoulder exactly.
-- Do not create perfectly horizontal or mathematically symmetrical shoulders.
-- Preserve natural human asymmetry.
-- The final image must show a convincingly complete and naturally balanced upper-body composition suitable for an official passport/visa photograph.
+- Treat this image as the source for a universal E.R.U portrait master from which multiple passport and visa photo sizes will later be generated.
+- The final edited image MUST contain enough real-looking upper-body content for later 2x2, 3.5x4.5, 3x4, 4x6, and 5x7 crops without exposing blank white canvas below the subject.
+- Extend and reconstruct the portrait downward when necessary. The reconstructed result must include both complete shoulders and a substantial upper-torso clothing area below the shoulders.
+- Do not leave blank, empty, or artificially white canvas underneath the clothing or shoulders.
+- Any newly available lower canvas area must be filled naturally with reconstructed clothing, upper torso, and background as appropriate.
+- Reconstruct missing left and right clothing and shoulder areas using the visible neckline, collar, garment structure, pattern, seams, folds, texture, lighting, body anatomy, and existing clothing as references.
+- Continue striped, patterned, textured, or structured garments naturally into reconstructed areas. Pattern scale and direction must remain visually consistent with the original garment.
+- Preserve the original clothing type, collar, neckline, design, material, pattern, color, texture, and fit unless a separate destination clothing-color rule explicitly requires recoloring.
 
+PORTRAIT CENTERING AND POSTURE:
+
+- Create a naturally centered professional ID-photo composition.
+- The head, neck, and upper torso should appear visually centered as one portrait rather than centering only the face.
+- Correct obvious lateral upper-body displacement when necessary.
+- Both shoulders must have convincing and sufficient visible width for later portrait cropping.
+- If one shoulder is excessively raised, lowered, pushed forward, rotated, shortened, cropped, or visually dominant, gently correct the shoulder and local upper-torso posture.
+- Make the shoulders appear naturally balanced, as if the photographer corrected the subject's posture before taking the photograph.
+- Do not create perfect mirror symmetry.
+- Do not make the shoulders mathematically horizontal.
+- Preserve subtle natural human asymmetry.
+
+IDENTITY AND ANATOMY PROTECTION:
+
+- Preserve the person's exact facial identity.
+- Preserve the original face shape, facial proportions, eyes, nose, mouth, jaw, ears, forehead, hairline, hairstyle, expression, and apparent age.
+- Preserve the original head size relative to the source portrait.
+- Preserve natural neck width, body type, and realistic anatomy.
+- Do not narrow, widen, lengthen, shorten, reshape, or beautify the face or body.
+- Do not shrink the face merely to create additional space.
+- Do not stretch the person vertically or horizontally.
+- Do not simply zoom the original photograph out and leave unused canvas.
+- Do not move only the face independently of the neck and torso.
+
+MASTER OUTPUT REQUIREMENT:
+
+- The result must look like one continuous photograph captured with a camera, not an original photograph placed over an extended canvas.
+- There must be no visible boundary between original and reconstructed areas.
+- There must be no blank white strip beneath the subject.
+- There must be no abrupt clothing cutoff at the bottom edge.
+- The reconstructed lower clothing and background must remain photorealistic and continuous.
+- Generate enough upper-torso content so subsequent portrait crops can safely remove excess lower content instead of needing to add missing content.
+- Prioritize a complete, centered, naturally balanced upper-body master over matching the tight crop of the uploaded source.
 `: "") + 
 
 (darkClothingRequired ? `

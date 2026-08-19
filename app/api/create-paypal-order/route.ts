@@ -63,13 +63,22 @@ export async function POST(req: Request) {
   process.env.NEXT_PUBLIC_SITE_URL ||
   "https://usvisaphoto.app";
 
-    let product: ProductType = "basic";
-    let securePhotoTokens: string[] = [];
+   let product: ProductType = "basic";
+   let securePhotoTokens: string[] = [];
+   let extraSizeKeys: string[] = [];
 
     try {
       const body = await req.json();
+      extraSizeKeys = Array.isArray(body?.extraSizeKeys)
+  ? body.extraSizeKeys
+      .filter(
+        (sizeKey: unknown) =>
+          typeof sizeKey === "string"
+      )
+      .slice(0, 5)
+  : [];
       securePhotoTokens = Array.isArray(body?.securePhotoTokens)
-        ? body.securePhotoTokens.filter((token: unknown) => typeof token === "string" && token.startsWith("v1.")).slice(0, 2)
+        ? body.securePhotoTokens.filter((token: unknown) => typeof token === "string" && token.startsWith("v1.")).slice(0, 6)
         : [];
 
       if (body?.product === "expert-international") {
@@ -88,7 +97,11 @@ export async function POST(req: Request) {
     } catch {
       product = "basic";
     }
-
+const professionalInternationalAmount =
+  (
+    9.99 +
+    extraSizeKeys.length * 3
+  ).toFixed(2);
     const productConfig = {
   basic: {
     description: "U.S. Visa Photo Download",
@@ -103,10 +116,10 @@ export async function POST(req: Request) {
     value: "9.99",
   },
   "professional-international": {
-    description:
-      "Embassy-Ready U.S. Visa and Additional Photo — Grand Opening",
-    value: "12.99",
-  },
+  description:
+    "Embassy-Ready U.S. Visa and Additional Photo — Grand Opening",
+  value: professionalInternationalAmount,
+},
   expert: {
     description: "Expert Manual U.S. Visa Photo Editing — Grand Opening",
     value: "19.99",
@@ -122,7 +135,7 @@ export async function POST(req: Request) {
   product === "professional"
     ? 2
     : product === "professional-international"
-      ? securePhotoTokens.length
+      ? 2 + extraSizeKeys.length
       : product.endsWith("-international")
         ? 2
         : 1;

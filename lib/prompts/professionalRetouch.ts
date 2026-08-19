@@ -328,6 +328,42 @@ Keep jacket lapels naturally balanced around the centered neck and tie.
 
 Do not change shoulder width, body build, clothing style, shirt design, tie design, or jacket design.
 
+CLOTHING PATTERN PRESERVATION IS MANDATORY.
+
+Preserve every visible garment exactly as the same garment from the source image.
+
+For striped, checked, plaid, patterned, textured, ribbed, stitched, printed, or multi-tone clothing, preserve and continue the original pattern across every reconstructed or extended clothing area.
+
+Match the source garment's:
+- pattern type
+- stripe or check direction
+- stripe or check spacing
+- stripe or check width
+- line thickness
+- color sequence
+- fabric color
+- fabric texture
+- weave appearance
+- seams
+- stitching
+- folds
+- collar construction
+- buttons
+- piping and trim
+
+Never replace a patterned garment area with a plain or simplified fabric.
+
+Never remove stripes, checks, lines, texture, or repeated garment details merely because the clothing area is reconstructed or extended.
+
+If the shirt body contains a stripe or check pattern while the collar has a different pattern or construction, preserve that distinction exactly. Do not copy the collar pattern onto the shirt body and do not copy the shirt-body pattern onto the collar.
+
+When extending cropped clothing or upper torso, infer the continuation strictly from the nearest visible original garment pixels and continue the same pattern naturally.
+
+The reconstructed clothing must look like a physically continuous extension of the exact original garment, not a newly generated similar garment.
+
+When uncertain about a garment detail, preserve the nearest visible source structure rather than inventing or simplifying it.
+
+
 The clothing and upper body must adapt to the preserved face, never the opposite.
 
 A result with an obviously off-center neck or tie, tilted shoulder line, or laterally displaced upper torso is NOT a completed E.R.U. result.
